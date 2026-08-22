@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-mode="layman">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skyrim Reverse Engineering — Interactive Layman-to-Master Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-raised: #21262d;
+  --surface-sub: #0b0e14;
+  --border: #30363d;
+  --border-focus: #58a6ff;
+  
+  --ink: #e6edf3;
+  --ink-muted: #8b949e;
+  --ink-faint: #6e7681;
+  
+  --accent: #f0883e;
+  --accent-soft: rgba(240, 136, 62, 0.15);
+  --accent-border: #d29922;
+  
+  --blue: #58a6ff;
+  --blue-soft: rgba(88, 166, 255, 0.15);
+  --purple: #bc8cff;
+  --purple-soft: rgba(188, 140, 255, 0.15);
+  --green: #3fb950;
+  --green-soft: rgba(63, 185, 80, 0.15);
+  --red: #f85149;
+  --red-soft: rgba(248, 81, 73, 0.15);
+  --cyan: #39c5cf;
+  --cyan-soft: rgba(57, 197, 207, 0.15);
+  
+  --se-color: #3fb950;
+  --ae-color: #f0883e;
+  
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --radius: 8px;
+}
+
+[data-theme="light"] {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-raised: #eaeef2;
+  --surface-sub: #f0f3f6;
+  --border: #d0d7de;
+  --border-focus: #0969da;
+  
+  --ink: #1f2328;
+  --ink-muted: #57606a;
+  --ink-faint: #8c959f;
+  
+  --accent: #bf5b04;
+  --accent-soft: #fff3e6;
+  --accent-border: #9a6700;
+  
+  --blue: #0969da;
+  --blue-soft: #ddf4ff;
+  --purple: #8250df;
+  --purple-soft: #fbefff;
+  --green: #1a7f37;
+  --green-soft: #dafbe1;
+  --red: #cf222e;
+  --red-soft: #ffebe9;
+  --cyan: #057a8a;
+  --cyan-soft: #dcfafe;
+  
+  --se-color: #1a7f37;
+  --ae-color: #bf5b04;
+  
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, pre, .mono, kbd {
+  font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+}
+
+/* Header & Nav */
+header.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13, 17, 23, 0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+[data-theme="light"] header.app-header {
+  background: rgba(246, 248, 250, 0.94);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-badge {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.brand-title {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-sub);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+.nav-tab {
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.nav-tab:hover {
+  color: var(--ink);
+  background: var(--surface-raised);
+}
+.nav-tab.active {
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Mode Switcher */
+.mode-toggle-group {
+  display: flex;
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+.mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.mode-btn:hover { color: var(--ink); }
+.mode-btn.active {
+  background: var(--accent);
+  color: #000;
+  font-weight: 800;
+}
+
+.btn-icon {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.btn-icon:hover { border-color: var(--accent); }
+
+/* Mode Alert Banner */
+.mode-banner {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 13.5px;
+}
+.mode-banner-icon { font-size: 20px; }
+.mode-banner-text { flex: 1; color: var(--ink-muted); }
+.mode-banner-text b { color: var(--ink); }
+
+/* Main Container */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 80px;
+}
+
+.tab-pane {
+  display: none;
+  animation: fadeIn 0.2s ease forwards;
+}
+.tab-pane.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Hero */
+.hero {
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.hero-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.hero h1 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+.hero p {
+  font-size: 15px;
+  color: var(--ink-muted);
+  max-width: 860px;
+  margin: 0;
+}
+
+/* Cards & Layout */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.card-subtitle {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: 3px 0 0;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.grid-sidebar {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
+}
+@media (max-width: 960px) {
+  .grid-2, .grid-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Layman Explainer Box */
+.layman-box {
+  background: var(--surface-raised);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 16px 18px;
+  margin: 14px 0;
+}
+.layman-box-title {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 14px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Interactive Hotel Visualizer */
+.hotel-building {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+@media (max-width: 700px) {
+  .hotel-building { grid-template-columns: repeat(2, 1fr); }
+}
+.hotel-room {
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+.hotel-room:hover {
+  transform: translateY(-2px);
+  border-color: var(--blue);
+}
+.hotel-room.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 12px var(--accent-soft);
+}
+.room-number {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+.room-item {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.room-desc {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.room-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-top: 6px;
+}
+
+/* Interactive Hex Inspector */
+.hex-editor {
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 13px;
+  user-select: none;
+}
+.hex-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "JetBrains Mono", monospace;
+}
+.hex-table th {
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.hex-table td {
+  padding: 4px 8px;
+  vertical-align: middle;
+}
+.hex-addr {
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.hex-bytes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.byte-cell {
+  display: inline-block;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.byte-cell:hover {
+  background: var(--surface-raised);
+  color: var(--accent);
+}
+.byte-cell.highlight-ptr {
+  background: var(--blue-soft);
+  color: var(--blue);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+}
+.byte-cell.highlight-vtable {
+  background: var(--purple-soft);
+  color: var(--purple);
+  border: 1px solid rgba(188, 140, 255, 0.4);
+}
+.byte-cell.highlight-field {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid rgba(63, 185, 80, 0.4);
+}
+
+/* Decoded Value Box */
+.decode-box {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.decode-item {
+  display: flex;
+  flex-direction: column;
+}
+.decode-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 2px;
+}
+.decode-val {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cyan);
+  word-break: break-all;
+}
+
+/* Pointer Dereference Visualizer */
+.ptr-chain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 16px 8px;
+}
+.ptr-node {
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  min-width: 190px;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s ease;
+}
+.ptr-node.active-step {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-soft);
+  transform: translateY(-2px);
+}
+.ptr-node-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+.ptr-node-addr {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.ptr-node-desc {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.ptr-arrow {
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* Address Chain Interactive Simulator */
+.calc-widget {
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.calc-field {
+  margin-bottom: 16px;
+}
+.calc-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}
+.calc-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.calc-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+}
+.calc-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.calc-math-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 16px;
+  flex-wrap: wrap;
+}
+.calc-box-tag {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+.calc-box-tag.res {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Target Discovery Visualizer */
+.radar-container {
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+}
+.memory-map-strip {
+  display: flex;
+  height: 54px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.map-segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.map-segment:hover {
+  filter: brightness(1.2);
+}
+.map-segment.selected {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.near-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.near-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 6px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.near-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--blue);
+}
+.near-card.selected {
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+.near-card-type {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+.near-card-name {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.near-card-meta {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+/* Live Diff Lab Simulator */
+.diff-lab {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.diff-col {
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+.diff-row {
+  display: grid;
+  grid-template-columns: 70px 100px 1fr;
+  padding: 5px 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  align-items: center;
+}
+.diff-row.changed {
+  background: rgba(248, 81, 73, 0.18);
+  border-left: 3px solid var(--red);
+  color: #ff9b9b;
+  font-weight: 700;
+}
+
+/* Code Snippet Box */
+.code-box {
+  background: #090c10;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #c9d1d9;
+  position: relative;
+}
+.code-box .kw { color: #ff7b72; }
+.code-box .type { color: #79c0ff; }
+.code-box .fn { color: #d2a8ff; }
+.code-box .str { color: #a5d6ff; }
+.code-box .num { color: #ffa657; }
+.code-box .cm { color: #8b949e; font-style: italic; }
+
+/* Buttons */
+.btn {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent-border);
+  font-weight: 700;
+}
+.btn-primary:hover {
+  background: #f8944d;
+  color: #000;
+}
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* Interactive Mission Step Flow */
+.mission-step {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+.mission-step.completed {
+  border-color: var(--green);
+  background: rgba(63, 185, 80, 0.05);
+}
+.mission-step.active-step {
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-soft);
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.step-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.step-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+.step-body {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.step-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.step-opt-btn {
+  text-align: left;
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+.step-opt-btn:hover {
+  border-color: var(--blue);
+  background: var(--surface-raised);
+}
+.step-feedback {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  display: none;
+}
+.step-feedback.success {
+  display: block;
+  background: var(--green-soft);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+.step-feedback.error {
+  display: block;
+  background: var(--red-soft);
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", monospace;
+}
+.badge-se { background: rgba(63, 185, 80, 0.2); color: var(--se-color); border: 1px solid var(--se-color); }
+.badge-ae { background: rgba(240, 136, 62, 0.2); color: var(--ae-color); border: 1px solid var(--ae-color); }
+.badge-id { background: var(--purple-soft); color: var(--purple); border: 1px solid var(--purple); }
+.badge-rva { background: var(--blue-soft); color: var(--blue); border: 1px solid var(--blue); }
+
+.callout {
+  padding: 14px 16px;
+  border-radius: 6px;
+  border-left: 4px solid var(--accent);
+  background: var(--surface-sub);
+  margin: 14px 0;
+  font-size: 14px;
+}
+.callout-title {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Dynamic Mode Visibility Control */
+[data-mode="layman"] .engineer-only { display: none !important; }
+[data-mode="engineer"] .layman-only { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-badge">Interactive Lab</span>
+    <span class="brand-title">Skyrim Reverse Engineering: The Complete Guide</span>
+  </div>
+  
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-target="tab-zero">
+      <span>00</span> 👶 Layman Primer
+    </button>
+    <button class="nav-tab" data-target="tab-memory">
+      <span>01</span> 🧱 Memory & Hex
+    </button>
+    <button class="nav-tab" data-target="tab-address">
+      <span>02</span> 🧭 Address Chain & ASLR
+    </button>
+    <button class="nav-tab" data-target="tab-discovery">
+      <span>03</span> 🎯 Locating Unexported Code
+    </button>
+    <button class="nav-tab" data-target="tab-diffing">
+      <span>04</span> 🔬 Live Bridge Diff
+    </button>
+    <button class="nav-tab" data-target="tab-mission">
+      <span>05</span> 🎮 Real RE Mission
+    </button>
+  </nav>
+
+  <div class="header-actions">
+    <div class="mode-toggle-group">
+      <button class="mode-btn active" id="mode-layman-btn" onclick="setMode('layman')">
+        <span>👶 Layman Mode</span>
+      </button>
+      <button class="mode-btn" id="mode-engineer-btn" onclick="setMode('engineer')">
+        <span>⚡ Engineer Mode</span>
+      </button>
+    </div>
+    <button class="btn-icon" id="theme-toggle" title="Toggle Dark/Light Mode">🌓</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- Active Mode Alert Banner -->
+  <div class="mode-banner">
+    <span class="mode-banner-icon layman-only">👶</span>
+    <span class="mode-banner-icon engineer-only">⚡</span>
+    <div class="mode-banner-text">
+      <div class="layman-only">
+        <b>Active Mode: Layman View</b> — Technical assembly, raw memory byte arrays, and C++ template headers are translated into everyday visual analogies (Hotels, Rooms, Street Addresses & Note Chasing).
+      </div>
+      <div class="engineer-only">
+        <b>Active Mode: Engineer View</b> — Full x86_64 disassembly, Address Library RelocationIDs, trampoline <code>write_call&lt;5&gt;</code> hooks, raw Little-Endian arithmetic, and Ghidra RTTI vtable layouts are unlocked.
+      </div>
+    </div>
+    <button class="btn btn-sm layman-only" onclick="setMode('engineer')">Switch to Engineer Mode &rarr;</button>
+    <button class="btn btn-sm engineer-only" onclick="setMode('layman')">Switch to Layman Mode &rarr;</button>
+  </div>
+
+  <!-- ================= TAB 0: LAYMAN PRIMER ================= -->
+  <div id="tab-zero" class="tab-pane active">
+    <div class="hero">
+      <div class="hero-tag">Zero Prior Knowledge Required</div>
+      <h1>How Computers "Remember" Things: The 5 Mental Models</h1>
+      <p>
+        If you have never seen a line of code or a hex byte in your life, start here. Reverse engineering is not magic—it is simply exploring an unmarked hotel with a flashlight.
+      </p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Analogy 1 -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🏨 1. The Hotel Analogy: What is Memory?</h3>
+        </div>
+        <p style="font-size:14px; color:var(--ink);">
+          Imagine a gigantic hotel with millions of rooms. Each room has:
+        </p>
+        <ul style="padding-left:20px; font-size:14px; color:var(--ink-muted);">
+          <li><b>Room Number</b> = The <b>Memory Address</b> (e.g. <code>#101</code> or <code>0x7FF74E210000</code>).</li>
+          <li><b>What's Inside the Room</b> = The <b>Value / Data</b> (e.g. Health: <code>100</code>, Gold: <code>500</code>).</li>
+          <li><b>A Pointer</b> = A room that contains no luggage, just a note saying <i>"Go to Room #304"</i>.</li>
+        </ul>
+
+        <!-- Interactive Hotel Demo -->
+        <div style="margin-top:14px;">
+          <div style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--accent); margin-bottom:6px;">
+            Interactive Hotel: Click a room to inspect what's inside!
+          </div>
+          <div class="hotel-building">
+            <div class="hotel-room active" id="hroom-1" onclick="inspectHotelRoom(1)">
+              <div class="room-number">Room #101 (Player)</div>
+              <div class="room-item">📜 Note to #205</div>
+              <div class="room-desc">Pointer to Inventory</div>
+              <span class="room-badge" style="background:var(--blue-soft); color:var(--blue);">Pointer</span>
+            </div>
+            <div class="hotel-room" id="hroom-2" onclick="inspectHotelRoom(2)">
+              <div class="room-number">Room #102 (Health)</div>
+              <div class="room-item">❤️ 100 HP</div>
+              <div class="room-desc">Direct Number</div>
+              <span class="room-badge" style="background:var(--green-soft); color:var(--green);">Value</span>
+            </div>
+            <div class="hotel-room" id="hroom-3" onclick="inspectHotelRoom(3)">
+              <div class="room-number">Room #205 (Inventory)</div>
+              <div class="room-item">🗡️ Iron Sword</div>
+              <div class="room-desc">Object in Memory</div>
+              <span class="room-badge" style="background:var(--purple-soft); color:var(--purple);">Target</span>
+            </div>
+            <div class="hotel-room" id="hroom-4" onclick="inspectHotelRoom(4)">
+              <div class="room-number">Room #300 (AI)</div>
+              <div class="room-item">⚔️ Aggressive</div>
+              <div class="room-desc">Combat State Flag</div>
+              <span class="room-badge" style="background:var(--accent-soft); color:var(--accent);">Flag</span>
+            </div>
+          </div>
+          <div class="layman-box" id="hotel-explainer">
+            <div class="layman-box-title">🚪 Inspecting Room #101</div>
+            You found a note pointing to <b>Room #205</b>. Walking from #101 to #205 to grab the Iron Sword is called <b>Dereferencing</b>!
+          </div>
+        </div>
+      </div>
+
+      <!-- Analogy 2 -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">🚌 2. The Hotel on Wheels: What is ASLR?</h3>
+        </div>
+        <p style="font-size:14px; color:var(--ink);">
+          For security, Windows places the entire hotel on wheels. Every time you launch Skyrim, the hotel is parked on a <b>random street in the city</b> (the <b>Base Address</b>).
+        </p>
+        
+        <div class="layman-box" style="border-left-color:var(--blue);">
+          <div class="layman-box-title" style="color:var(--blue);">🔑 The Golden Rule of Offsets</div>
+          Even if the hotel moves to a new street address today, the <b>distance from the Lobby to Room #105</b> is <b>always exactly 5 doors down (+5 offset)</b>!<br>
+          <br>
+          <b>Formula:</b> <code>Today's Street Address (Base) + Distance Down Hall (Offset) = The Room (Runtime VA)</code>.
+        </div>
+
+        <div style="margin-top:16px;">
+          <h4 style="margin:0 0 6px; font-size:14px;">📖 3. The Phone Directory: Address Library</h4>
+          <p style="font-size:13px; color:var(--ink-muted); margin:0;">
+            When Bethesda updates Skyrim (from SE 1.5.97 to AE 1.6.1170), they rebuild the hotel and shuffle room numbers. <b>Address Library IDs</b> are permanent resident IDs that let our mods look up the new room number in a table automatically!
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analogy 3: Finding Unexported Functions -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">🕵️ 4. Landmarks & Proximity: How to Find Unnamed Functions</h3>
+      </div>
+      <div class="grid-2">
+        <div>
+          <p style="font-size:14px; color:var(--ink);">
+            Skyrim's developers removed all name tags from their code before releasing the game. You want to find the secret unexported function that calculates stealth, but <b>there is no door sign</b>.
+          </p>
+          <p style="font-size:14px; color:var(--ink-muted);">
+            How do we find it? We use <b>Landmark & Cross-Reference (XREF) Analysis</b>:
+          </p>
+          <ol style="font-size:14px; color:var(--ink-muted); padding-left:20px;">
+            <li><b>Look for the Neon Pizza Sign:</b> We search for a known debug string like <code>"Stealth Detected"</code> in memory.</li>
+            <li><b>Follow Footsteps (XREFs):</b> We check which unexported function calls or reads that string.</li>
+            <li><b>Measure Distance:</b> It is sitting in the text segment right next to known ID <code>52224</code>!</li>
+          </ol>
+        </div>
+        <div>
+          <div class="layman-box" style="border-left-color:var(--green); margin-top:0;">
+            <div class="layman-box-title" style="color:var(--green);">📸 5. The Crime Scene Photo: Live Diffing</div>
+            <p style="font-size:13px; margin:0 0 8px;">
+              Don't know which memory number holds the "Sneaking" status?
+            </p>
+            <ol style="font-size:13px; margin:0; padding-left:18px;">
+              <li>Take a photo of all memory while the player is standing.</li>
+              <li>Press the crouch button in-game.</li>
+              <li>Take a second photo and compare them.</li>
+              <li>The single number that flipped from <code>0</code> to <code>1</code> is your target!</li>
+            </ol>
+          </div>
+          <div style="text-align:center; margin-top:16px;">
+            <button class="btn btn-primary" onclick="goToTab('tab-memory')">
+              Ready to see the Real Memory? Jump to Tab 01 &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 1: MEMORY PRIMER ================= -->
+  <div id="tab-memory" class="tab-pane">
+    <div class="hero">
+      <div class="hero-tag">Core Foundation</div>
+      <h1>Raw Bytes, Endianness & Dereferencing</h1>
+      <p>In memory, there are no variable names—only numbered byte slots. Reverse engineering is learning how to read raw byte layouts and chase pointers through structures.</p>
+    </div>
+
+    <div class="grid-sidebar">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Pointer Dereference Chain</h3>
+              <p class="card-subtitle">From Local Pointer to Struct Member</p>
+            </div>
+          </div>
+          
+          <div class="layman-only">
+            <p style="font-size:13px; color:var(--ink-muted);">
+              <b>Note-Chasing Game:</b> Follow the sticky notes from the Player to find who they are attacking in combat. Click step-by-step!
+            </p>
+          </div>
+
+          <div class="engineer-only">
+            <p style="font-size:13px; color:var(--ink-muted);">
+              <b>x86_64 Pointer Chain:</b>
+              <code>mov rcx, [player]</code> &rarr; <code>mov rcx, [rcx + 0xB8]</code> &rarr; <code>mov rcx, [rcx + 0x10]</code> &rarr; <code>mov rax, [rcx + 0x08]</code>
+            </p>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px; margin:16px 0;">
+            <button class="btn btn-sm" id="btn-step-ptr" onclick="stepPointerChain()">
+              <span>Next Dereference Step</span> &rarr;
+            </button>
+            <button class="btn btn-sm" onclick="resetPointerChain()">Reset Chain</button>
+          </div>
+
+          <div class="callout layman-only">
+            <div class="callout-title">💡 Layman Rule: Backwards Numbers (Little-Endian)</div>
+            Computers write numbers backward in memory! Address <code>0x1408e6140</code> is saved as:<br>
+            <code style="color:var(--accent); font-weight:700;">40 61 8e 40 01 00 00 00</code>
+          </div>
+
+          <div class="callout engineer-only">
+            <div class="callout-title">⚡ x86_64 Little-Endian Architecture</div>
+            Least Significant Byte (LSB) stored at the lowest memory offset. A 64-bit pointer loaded into <code>RAX</code> swaps byte order back automatically via hardware registers.
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Live Memory Hex Inspector (Player Actor Region)</h3>
+              <p class="card-subtitle">Click any byte row or field to inspect its decoded value and type</p>
+            </div>
+            <div>
+              <span class="badge badge-rva">Base VA: 0x7FF74E210000</span>
+            </div>
+          </div>
+
+          <!-- Pointer Visualization Bar -->
+          <div class="ptr-chain" id="ptr-chain-view">
+            <div class="ptr-node active-step" id="node-0">
+              <div class="ptr-node-title">Step 0: Player Object</div>
+              <div class="ptr-node-addr">0x7FF74E210000</div>
+              <div class="ptr-node-desc">PlayerCharacter* (Singleton)</div>
+            </div>
+            <div class="ptr-arrow">&rarr;</div>
+            <div class="ptr-node" id="node-1">
+              <div class="ptr-node-title">Step 1: +0x0B8 Offset</div>
+              <div class="ptr-node-addr">0x0000021A4B90F200</div>
+              <div class="ptr-node-desc">AIProcess* (Actor Process)</div>
+            </div>
+            <div class="ptr-arrow">&rarr;</div>
+            <div class="ptr-node" id="node-2">
+              <div class="ptr-node-title">Step 2: +0x010 Offset</div>
+              <div class="ptr-node-addr">0x0000021A4B90FA40</div>
+              <div class="ptr-node-desc">MiddleHighProcess* Data</div>
+            </div>
+            <div class="ptr-arrow">&rarr;</div>
+            <div class="ptr-node" id="node-3">
+              <div class="ptr-node-title">Step 3: Target Actor</div>
+              <div class="ptr-node-addr">0x0000021A88A12300</div>
+              <div class="ptr-node-desc">Target: Bandit Thug [0x0002E310]</div>
+            </div>
+          </div>
+
+          <!-- Hex Dump Table -->
+          <div class="hex-editor" style="margin-top:16px;">
+            <table class="hex-table">
+              <thead>
+                <tr>
+                  <th style="width:130px;">Offset (RVA / Field)</th>
+                  <th>Raw Bytes (Hex Little-Endian)</th>
+                  <th style="width:160px;">Interpretation</th>
+                </tr>
+              </thead>
+              <tbody id="hex-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Decode inspector -->
+          <div class="decode-box" id="decode-view">
+            <div class="decode-item">
+              <span class="decode-label">Selected Field</span>
+              <span class="decode-val" id="dec-field">PlayerCharacter::vtable</span>
+            </div>
+            <div class="decode-item">
+              <span class="decode-label">Virtual Address</span>
+              <span class="decode-val" id="dec-va">0x7FF74E210000</span>
+            </div>
+            <div class="decode-item">
+              <span class="decode-label">Raw Hex (8 bytes)</span>
+              <span class="decode-val" id="dec-raw">80 42 6E 4E F7 7F 00 00</span>
+            </div>
+            <div class="decode-item">
+              <span class="decode-label">Decoded Pointer / Int</span>
+              <span class="decode-val" id="dec-typed">0x7FF74E6E4280 (Vtable)</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 2: ADDRESS CHAIN & ASLR ================= -->
+  <div id="tab-address" class="tab-pane">
+    <div class="hero">
+      <div class="hero-tag">Resolution Architecture</div>
+      <h1>The Skyrim Address Chain & Dual-Build Engine</h1>
+      <p>Skyrim exports no symbols. Every hook requires mapping an Address Library ID &rarr; RVA &rarr; Runtime Virtual Address (with ASLR).</p>
+    </div>
+
+      <div class="card" style="grid-column: 1 / -1; background: var(--surface-sub); border-left: 4px solid var(--cyan);">
+        <div class="card-header" style="border-bottom: 1px solid var(--border);">
+          <h3 class="card-title" style="color:var(--cyan);">🛡️ What is ASLR? (Address Space Layout Randomization)</h3>
+          <span class="badge" style="background:var(--cyan-soft); color:var(--cyan); border:1px solid var(--cyan);">Core OS Security</span>
+        </div>
+        
+        <div class="grid-2" style="gap:16px;">
+          <div>
+            <h4 style="margin:0 0 6px; font-size:14px; color:var(--ink);" class="layman-only">🏨 The Plain-English Explanation</h4>
+            <h4 style="margin:0 0 6px; font-size:14px; color:var(--ink);" class="engineer-only">⚡ How Windows ASLR Works</h4>
+            <p style="font-size:13.5px; color:var(--ink-muted); margin:0 0 10px;">
+              <b>ASLR</b> stands for <b>Address Space Layout Randomization</b>. It is a security feature built into Windows. Every time you launch <code>SkyrimSE.exe</code>, Windows rolls a random dice and loads the entire game into a completely different memory address.
+            </p>
+            <ul style="padding-left:18px; font-size:13px; color:var(--ink-muted); margin:0;">
+              <li><b>Why Windows does this:</b> To prevent malware and viruses from predicting where functions live in RAM and exploiting buffer overflows.</li>
+              <li><b>What it means for SKSE mods:</b> You can <b>never hardcode a memory address</b> (e.g. <code>0x7FF74EAF6140</code>) because next launch, that address will point to junk or crash the game.</li>
+            </ul>
+          </div>
+
+          <div>
+            <div class="layman-box" style="border-left-color:var(--accent); margin:0; padding:12px 14px;">
+              <div class="layman-box-title" style="font-size:13px;">🔑 The Solution: Base + Offset (RVA)</div>
+              <p style="font-size:12.5px; color:var(--ink); margin:0 0 6px;">
+                While the <b>Base Address</b> moves randomly every launch, the <b>Relative Virtual Address (RVA)</b> — the distance of a function from the start — <b>never changes</b> within a game version!
+              </p>
+              <code style="font-size:12px; color:var(--accent); font-weight:700;">Runtime Address = (Random ASLR Base) + (Fixed RVA Offset)</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Interactive Address Resolver</h3>
+        </div>
+
+        <div class="calc-widget">
+          <div class="calc-field">
+            <label class="layman-only">1. Today's Hotel Street Location (ASLR Base)</label>
+            <label class="engineer-only">1. ASLR Game Module Base Address (Runtime VA)</label>
+            <div class="calc-input-group">
+              <input type="text" id="calc-base" class="calc-input" value="0x7FF74E210000" oninput="recalcAddress()">
+              <button class="btn btn-sm" onclick="randomizeASLR()">Randomize ASLR Base</button>
+            </div>
+          </div>
+
+          <div class="calc-field">
+            <label class="layman-only">2. Pick a Target Action to Calculate</label>
+            <label class="engineer-only">2. Select Target Function or Enter Address Library ID</label>
+            <select id="calc-preset" class="calc-input" onchange="applyPresetAddress(this.value)">
+              <option value="52224">ID 52224 (SE) / 53106 (AE) — Actor::GetCombatTarget</option>
+              <option value="19365">ID 19365 (SE) / 19792 (AE) — TESForm::GetFormID</option>
+              <option value="37609">ID 37609 (SE) / 38556 (AE) — PlayerCharacter::GetSingleton</option>
+              <option value="51421">ID 51421 (SE) / 52288 (AE) — Actor::SetPosition</option>
+            </select>
+          </div>
+
+          <div class="calc-math-row">
+            <div class="calc-box-tag">
+              <div style="font-size:10px; color:var(--ink-muted);" class="layman-only">STREET ADDRESS</div>
+              <div style="font-size:10px; color:var(--ink-muted);" class="engineer-only">MODULE BASE</div>
+              <span id="math-base">0x7FF74E210000</span>
+            </div>
+            <div>+</div>
+            <div class="calc-box-tag">
+              <div style="font-size:10px; color:var(--ink-muted);" class="layman-only">DISTANCE DOWN HALL</div>
+              <div style="font-size:10px; color:var(--ink-muted);" class="engineer-only">RVA OFFSET</div>
+              <span id="math-rva">0x008E6140</span>
+            </div>
+            <div>=</div>
+            <div class="calc-box-tag res">
+              <div style="font-size:10px; color:var(--accent);" class="layman-only">ROOM LOCATION TODAY</div>
+              <div style="font-size:10px; color:var(--accent);" class="engineer-only">RUNTIME VA (HOOK TARGET)</div>
+              <span id="math-va">0x7FF74EAF6140</span>
+            </div>
+          </div>
+
+          <div class="callout" style="margin-top:16px;">
+            <div class="callout-title layman-only">📖 Layman Phone Book Lookup</div>
+            <div class="callout-title engineer-only">⚡ Generated SKSE Dual-Build Code</div>
+            
+            <div class="layman-only" style="font-size:13.5px; color:var(--ink-muted); margin-bottom:8px;">
+              Your mod asks the Address Library phone book: <i>"Give me Resident #52224 on SE and #53106 on AE"</i>. It calculates today's room location instantly without you needing to do manual math!
+            </div>
+
+            <div class="code-box" id="calc-skse-code">
+<span class="cm">// SE ID: 52224, AE ID: 53106</span>
+<span class="kw">inline static</span> <span class="type">REL::Relocation</span>&lt;<span class="type">Actor*</span>(*)(<span class="type">Actor*</span>)&gt; <span class="fn">GetCombatTarget</span>{ <span class="type">REL::RelocationID</span>(<span class="num">52224</span>, <span class="num">53106</span>) };
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Address Library Dual Mapping Table</h3>
+        </div>
+        
+        <p style="font-size:13px; color:var(--ink-muted);">
+          Why raw RVAs fail across versions: Steam updates shift text segment offsets, but Address Library IDs remain the canonical cross-version anchor.
+        </p>
+
+        <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border); text-align:left;">
+              <th style="padding:8px;">Function / Anchor</th>
+              <th style="padding:8px;"><span class="badge badge-se">SE 1.5.97</span></th>
+              <th style="padding:8px;"><span class="badge badge-ae">AE 1.6.1170</span></th>
+              <th style="padding:8px;">RelocationID Pair</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:8px; font-weight:600;">PlayerCharacter::GetSingleton</td>
+              <td style="padding:8px; font-family:monospace;">ID 37609<br><span style="color:var(--ink-faint); font-size:11px;">RVA 0x620130</span></td>
+              <td style="padding:8px; font-family:monospace;">ID 38556<br><span style="color:var(--ink-faint); font-size:11px;">RVA 0x654300</span></td>
+              <td style="padding:8px; font-family:monospace; color:var(--accent);">REL::RelocationID(37609, 38556)</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:8px; font-weight:600;">Actor::GetCombatTarget</td>
+              <td style="padding:8px; font-family:monospace;">ID 52224<br><span style="color:var(--ink-faint); font-size:11px;">RVA 0x8E6140</span></td>
+              <td style="padding:8px; font-family:monospace;">ID 53106<br><span style="color:var(--ink-faint); font-size:11px;">RVA 0x932F20</span></td>
+              <td style="padding:8px; font-family:monospace; color:var(--accent);">REL::RelocationID(52224, 53106)</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:8px; font-weight:600;">TESForm::GetFormID</td>
+              <td style="padding:8px; font-family:monospace;">ID 19365<br><span style="color:var(--ink-faint); font-size:11px;">RVA 0x2213F0</span></td>
+              <td style="padding:8px; font-family:monospace;">ID 19792<br><span style="color:var(--ink-faint); font-size:11px;">RVA 0x2352B0</span></td>
+              <td style="padding:8px; font-family:monospace; color:var(--accent);">REL::RelocationID(19365, 19792)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 3: LOCATING UNEXPORTED TARGETS ================= -->
+  <div id="tab-discovery" class="tab-pane">
+    <div class="hero">
+      <div class="hero-tag">Target Discovery Methodology</div>
+      <h1>Locating Unexported Code & Struct Members</h1>
+      <p>When a function or struct field has no name in Ghidra, we never guess. We <b>anchor to a known entity and navigate proximity</b> using 4 standard reverse engineering techniques.</p>
+    </div>
+
+    <div class="radar-container">
+      <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700; font-size:14px;">Interactive Binary Text Segment (Click an Anchor to see how Target Discovery works)</span>
+        <span style="font-size:12px; color:var(--ink-muted);">Target: <b style="color:var(--accent);">Unexported Stealth Detection Function</b></span>
+      </div>
+
+      <!-- Visual Segment Bar -->
+      <div class="memory-map-strip">
+        <div class="map-segment" style="width:25%; background:#1c2d42; color:#58a6ff;" onclick="selectDiscoveryTechnique(0)">
+          <span>Anchor 1</span>
+          <span style="font-size:9px;">String: "Stealth Detected"</span>
+        </div>
+        <div class="map-segment" style="width:20%; background:#2d1c42; color:#bc8cff;" onclick="selectDiscoveryTechnique(1)">
+          <span>Anchor 2</span>
+          <span style="font-size:9px;">Known ID: 52224</span>
+        </div>
+        <div class="map-segment selected" style="width:15%; background:#422a1c; color:#f0883e;" onclick="selectDiscoveryTechnique(2)">
+          <span>TARGET ?</span>
+          <span style="font-size:9px;">+0x140 from ID 52224</span>
+        </div>
+        <div class="map-segment" style="width:20%; background:#1c4228; color:#3fb950;" onclick="selectDiscoveryTechnique(3)">
+          <span>Anchor 3</span>
+          <span style="font-size:9px;">Vtable Slot 0x0A8</span>
+        </div>
+        <div class="map-segment" style="width:20%; background:#421c24; color:#f85149;" onclick="selectDiscoveryTechnique(4)">
+          <span>Anchor 4</span>
+          <span style="font-size:9px;">Struct Field Diff</span>
+        </div>
+      </div>
+
+      <!-- 4 Discovery Techniques Breakdown -->
+      <div class="near-cards">
+        <div class="near-card selected" id="disc-card-0" onclick="selectDiscoveryTechnique(0)">
+          <div class="near-card-type" style="color:var(--blue);">Technique 1</div>
+          <div class="near-card-name">Cross-Reference (XREF) Tracing</div>
+          <div class="near-card-meta">
+            Search <code>.rdata</code> for debug strings, UI messages, or log prints. Trace XREFs up to find the enclosing unexported caller function.
+          </div>
+        </div>
+
+        <div class="near-card" id="disc-card-1" onclick="selectDiscoveryTechnique(1)">
+          <div class="near-card-type" style="color:var(--purple);">Technique 2</div>
+          <div class="near-card-name">Nearest-Neighbor ID Grep</div>
+          <div class="near-card-meta">
+            When a function at RVA X has no symbol, grep <code>offsets-se.txt</code> for the closest lower RVA to establish a known anchor and measure byte distance.
+          </div>
+        </div>
+
+        <div class="near-card" id="disc-card-2" onclick="selectDiscoveryTechnique(2)">
+          <div class="near-card-type" style="color:var(--accent);">Technique 3</div>
+          <div class="near-card-name">Vtable Virtual Slot Indexing</div>
+          <div class="near-card-meta">
+            Find the class RTTI locator (e.g. for <code>PlayerCharacter</code>). Count 8-byte pointer slots up or down from known virtual methods.
+          </div>
+        </div>
+
+        <div class="near-card" id="disc-card-3" onclick="selectDiscoveryTechnique(3)">
+          <div class="near-card-type" style="color:var(--green);">Technique 4</div>
+          <div class="near-card-name">Dynamic Memory Diffing</div>
+          <div class="near-card-meta">
+            Dump an Actor with Live Introspection Bridge before and after an action (e.g. sneaking, jumping) to watch which byte offset at <code>Actor+0x...</code> flips value.
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Explainer Box -->
+      <div class="card" style="margin-top:16px; background:var(--surface);">
+        <h4 id="disc-title" style="margin:0 0 8px; color:var(--accent); font-size:15px;">
+          Technique 1: Cross-Reference (XREF) Tracing Walkthrough
+        </h4>
+        <p id="disc-desc" style="font-size:14px; color:var(--ink); margin:0 0 12px;">
+          Skyrim contains thousands of unexported functions, but Bethesda left strings like error prints, console logs, and animation tag names in the <code>.rdata</code> section.
+        </p>
+        <div class="code-box" id="disc-code">
+<span class="cm">// Step 1: In Ghidra, search string: "DEFAULT: Target is not in combat"</span>
+<span class="cm">// Step 2: Look at XREFs to that string -> Lead directly to unexported function at RVA 0x8E6280</span>
+<span class="cm">// Step 3: Check offsets-se.txt: closest ID is 52224 (Actor::GetCombatTarget at 0x8E6140)</span>
+<span class="cm">// Target is exactly +0x140 bytes down from ID 52224!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 4: LIVE BRIDGE RE & DIFF ================= -->
+  <div id="tab-diffing" class="tab-pane">
+    <div class="hero">
+      <div class="hero-tag">Dynamic Analysis</div>
+      <h1>Live Bridge RE & Memory Diffing Simulator</h1>
+      <p>Static decompilation tells you what code <i>could</i> do. Live memory inspection confirms what it <i>actually</i> does at runtime. Stimulate the game and isolate the changing offset.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Live Introspection Bridge: Actor Memory Diff Lab</h3>
+          <p class="card-subtitle">Test stimulus triggers to discover the hidden field offset</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="triggerStimulus('sneak')">Stimulus: Toggle Sneak</button>
+          <button class="btn btn-primary btn-sm" onclick="triggerStimulus('weapon')">Stimulus: Draw Bow</button>
+          <button class="btn btn-primary btn-sm" onclick="triggerStimulus('damage')">Stimulus: Take 25 Damage</button>
+          <button class="btn btn-sm" onclick="resetStimulus()">Reset Memory</button>
+        </div>
+      </div>
+
+      <div class="diff-lab">
+        <div class="diff-col">
+          <div style="font-weight:700; font-size:12px; text-transform:uppercase; color:var(--ink-muted); margin-bottom:8px;">
+            Baseline Snapshot (Idle Stand) — FormID: 0x00000014
+          </div>
+          <div id="diff-base-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <div class="diff-col">
+          <div style="font-weight:700; font-size:12px; text-transform:uppercase; color:var(--ink-muted); margin-bottom:8px;">
+            Active Stimulus Snapshot (After Player Action)
+          </div>
+          <div id="diff-active-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="callout" id="diff-verdict" style="margin-top:16px;">
+        <div class="callout-title">🎯 RE Finding Analysis</div>
+        <div id="diff-verdict-text">
+          Select a stimulus above to watch Live Introspection Bridge capture and isolate the exact byte offset in the Actor struct!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 5: REAL RE MISSION ================= -->
+  <div id="tab-mission" class="tab-pane">
+    <div class="hero">
+      <div class="hero-tag">Hands-On Practice</div>
+      <h1>Real-World RE Mission: Hooking Unexported Combat State</h1>
+      <p>Step into the shoes of a Skyrim reverse engineer. Follow the exact workflow used to find, verify, and write an SKSE hook for an unexported engine function.</p>
+    </div>
+
+    <div id="mission-container">
+      <!-- Step 1 -->
+      <div class="mission-step active-step" id="mstep-1">
+        <div class="step-header">
+          <span class="step-num">Step 1 of 4: The Inquiry</span>
+          <span class="badge badge-id">Static Recon</span>
+        </div>
+        <h3 class="step-title">Objective: Find where Skyrim calculates if an Actor is in Combat</h3>
+        <div class="step-body">
+          CommonLib NG provides <code>Actor::IsInCombat()</code>, but we need to intercept the <i>internal scoring function</i> that decides combat targets before the state flips. Where do you begin?
+        </div>
+        <div class="step-options">
+          <button class="step-opt-btn" onclick="answerMission(1, 1)">A) Grep <code>symbols-se.txt</code> for "Combat" to find nearby exported names and IDs.</button>
+          <button class="step-opt-btn" onclick="answerMission(1, 2)">B) Guess an offset like <code>Actor + 0x300</code> and write a memory poke.</button>
+          <button class="step-opt-btn" onclick="answerMission(1, 3)">C) Disassemble the entire 60MB executable sequentially from byte 0.</button>
+        </div>
+        <div class="step-feedback" id="mfeedback-1"></div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="mission-step" id="mstep-2">
+        <div class="step-header">
+          <span class="step-num">Step 2 of 4: Nearest-Neighbor Analysis</span>
+          <span class="badge badge-rva">Anchor Lookup</span>
+        </div>
+        <h3 class="step-title">Grep finds ID 52224 (Actor::GetCombatTarget) at SE RVA 0x8E6140</h3>
+        <div class="step-body">
+          In Ghidra, we look at ID 52224 and notice it calls an unexported helper function at RVA <code>0x8E63B0</code>. How do we map this unexported function to Skyrim AE (1.6.1170)?
+        </div>
+        <div class="step-options">
+          <button class="step-opt-btn" onclick="answerMission(2, 1)">A) Look up <code>0x8E63B0</code> directly in <code>offsets-ae.txt</code> (Warning: RVAs change between versions!).</button>
+          <button class="step-opt-btn" onclick="answerMission(2, 2)">B) Strip the image base from the SE VA, grep <code>8e63b0</code> in <code>offsets-se.txt</code> to get its Address Library ID, then grep that ID in <code>offsets-ae.txt</code>.</button>
+          <button class="step-opt-btn" onclick="answerMission(2, 3)">C) Hardcode the SE RVA in our plugin and hope AE users don't crash.</button>
+        </div>
+        <div class="step-feedback" id="mfeedback-2"></div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="mission-step" id="mstep-3">
+        <div class="step-header">
+          <span class="step-num">Step 3 of 4: Dynamic Verification</span>
+          <span class="badge badge-se">Live Introspection</span>
+        </div>
+        <h3 class="step-title">Verify Live with Introspection Bridge</h3>
+        <div class="step-body">
+          Static analysis suggests the function takes <code>(Actor* a_this, Actor* a_target)</code> and returns a boolean in the <code>AL</code> register. Before writing hook code, how do we verify?
+        </div>
+        <div class="step-options">
+          <button class="step-opt-btn" onclick="answerMission(3, 1)">A) Use <code>mcp__Live-Introspection-Bridge__dump_memory</code> or <code>trace_calls</code> with the resolved runtime address to confirm register states live during combat.</button>
+          <button class="step-opt-btn" onclick="answerMission(3, 2)">B) Ship the mod to Nexus and wait for bug reports.</button>
+        </div>
+        <div class="step-feedback" id="mfeedback-3"></div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="mission-step" id="mstep-4">
+        <div class="step-header">
+          <span class="step-num">Step 4 of 4: Production SKSE Synthesis</span>
+          <span class="badge badge-ae">C++ Hooking</span>
+        </div>
+        <h3 class="step-title">Construct the Production SKSE Hook</h3>
+        <div class="step-body">
+          Both SE ID (52230) and AE ID (53112) are confirmed. Here is the verified dual-build hook snippet ready to be wired into your plugin:
+        </div>
+        <div class="code-box" style="margin-top:12px;">
+<span class="kw">struct</span> <span class="type">CombatScoreHook</span> {
+    <span class="kw">static bool</span> <span class="fn">Hook_EvaluateTarget</span>(<span class="type">RE::Actor</span>* a_this, <span class="type">RE::Actor</span>* a_target) {
+        <span class="cm">// Custom mod logic here</span>
+        <span class="kw">bool</span> result = <span class="fn">_EvaluateTarget</span>(a_this, a_target);
+        <span class="kw">return</span> result;
+    }
+
+    <span class="kw">static void</span> <span class="fn">Install</span>() {
+        <span class="type">REL::Relocation</span>&lt;<span class="kw">uintptr_t</span>&gt; target{ <span class="type">REL::RelocationID</span>(<span class="num">52230</span>, <span class="num">53112</span>) };
+        <span class="kw">auto</span>&amp; trampoline = <span class="type">SKSE::GetTrampoline</span>();
+        <span class="fn">_EvaluateTarget</span> = trampoline.<span class="fn">write_call&lt;5&gt;</span>(target.<span class="fn">address</span>() + <span class="num">0x24</span>, <span class="fn">Hook_EvaluateTarget</span>);
+    }
+
+    <span class="kw">inline static</span> <span class="type">REL::Relocation</span>&lt;<span class="kw">decltype</span>(<span class="fn">Hook_EvaluateTarget</span>)&gt; <span class="fn">_EvaluateTarget</span>;
+};
+        </div>
+        <div class="step-feedback success" style="display:block; margin-top:12px;">
+          🎉 <b>Mission Accomplished!</b> You have mastered the entire Skyrim RE chain: Static Recon &rarr; Anchor Proximity &rarr; Dual-ID Mapping &rarr; Live Introspection &rarr; Production SKSE Hook.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// --- TAB NAVIGATION ---
+function goToTab(targetId) {
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.getAttribute('data-target') === targetId) t.classList.add('active');
+    else t.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const targetPane = document.getElementById(targetId);
+  if (targetPane) targetPane.classList.add('active');
+}
+
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    goToTab(tab.getAttribute('data-target'));
+  });
+});
+
+// --- MODE TOGGLE (LAYMAN VS ENGINEER) ---
+function setMode(mode) {
+  document.documentElement.setAttribute('data-mode', mode);
+  document.getElementById('mode-layman-btn').classList.toggle('active', mode === 'layman');
+  document.getElementById('mode-engineer-btn').classList.toggle('active', mode === 'engineer');
+}
+
+// --- THEME TOGGLE ---
+const themeToggleBtn = document.getElementById('theme-toggle');
+themeToggleBtn.addEventListener('click', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+});
+
+// --- HOTEL ANALOGY INSPECTION ---
+const hotelRooms = {
+  1: {
+    title: "🚪 Inspecting Room #101 (Player Pointer)",
+    desc: "You open the door and find a sticky note: <b>'Go to Room #205'</b>.<br>In computer terms, Room #101 is a <b>Pointer</b>. Walking over to #205 to find the luggage is called <b>Dereferencing</b>."
+  },
+  2: {
+    title: "🚪 Inspecting Room #102 (Health Value)",
+    desc: "You open the door and find a suitcase filled with <b>100 Health Points</b>.<br>This is a raw <b>Value</b> (integer/float). No extra walking needed—the data lives right here."
+  },
+  3: {
+    title: "🚪 Inspecting Room #205 (Inventory Item)",
+    desc: "You arrived here by following the note from Room #101! Inside is an <b>Iron Sword</b>.<br>This shows how objects in Skyrim are linked together through chains of pointers."
+  },
+  4: {
+    title: "🚪 Inspecting Room #300 (Combat AI State)",
+    desc: "Inside this room is a light switch turned to <b>'ON'</b> (Bit 1 = In Combat).<br>When an enemy spots you, the game engine flips this single number in memory."
+  }
+};
+
+function inspectHotelRoom(id) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById(`hroom-${i}`);
+    if (el) el.classList.toggle('active', i === id);
+  }
+  const data = hotelRooms[id];
+  const box = document.getElementById('hotel-explainer');
+  box.innerHTML = `<div class="layman-box-title">${data.title}</div>${data.desc}`;
+}
+
+// --- HEX INSPECTOR DATA ---
+const hexRows = [
+  {
+    offset: "+0x000 (vtable)",
+    bytes: ["80", "42", "6E", "4E", "F7", "7F", "00", "00"],
+    interpretation: "PlayerCharacter::vtable (0x7FF74E6E4280)",
+    cls: "highlight-vtable",
+    field: "PlayerCharacter::vtable",
+    va: "0x7FF74E210000",
+    raw: "80 42 6E 4E F7 7F 00 00",
+    typed: "0x7FF74E6E4280 (Virtual Method Table)"
+  },
+  {
+    offset: "+0x008 (formID)",
+    bytes: ["14", "00", "00", "00", "00", "00", "00", "00"],
+    interpretation: "FormID: 0x00000014 (Player)",
+    cls: "highlight-field",
+    field: "TESForm::formID",
+    va: "0x7FF74E210008",
+    raw: "14 00 00 00 00 00 00 00",
+    typed: "0x00000014 (uint32_t FormID)"
+  },
+  {
+    offset: "+0x0B8 (process)",
+    bytes: ["00", "F2", "90", "4B", "1A", "02", "00", "00"],
+    interpretation: "AIProcess* ptr -> 0x021A4B90F200",
+    cls: "highlight-ptr",
+    field: "Actor::currentProcess",
+    va: "0x7FF74E2100B8",
+    raw: "00 F2 90 4B 1A 02 00 00",
+    typed: "0x0000021A4B90F200 (AIProcess* Pointer)"
+  },
+  {
+    offset: "+0x0C0 (actorState)",
+    bytes: ["02", "00", "00", "00", "00", "00", "00", "00"],
+    interpretation: "Flags: SNEAKING | WEAPON_DRAWN",
+    cls: "highlight-field",
+    field: "ActorState::actorState",
+    va: "0x7FF74E2100C0",
+    raw: "02 00 00 00 00 00 00 00",
+    typed: "0x00000002 (Bitfield Flags)"
+  },
+  {
+    offset: "+0x0C8 (combatTarget)",
+    bytes: ["00", "23", "A1", "88", "1A", "02", "00", "00"],
+    interpretation: "Actor* ptr -> Bandit [0x2E310]",
+    cls: "highlight-ptr",
+    field: "Actor::currentCombatTarget",
+    va: "0x7FF74E2100C8",
+    raw: "00 23 A1 88 1A 02 00 00",
+    typed: "0x0000021A88A12300 (Actor* Bandit Thug)"
+  }
+];
+
+function renderHexTable() {
+  const tbody = document.getElementById('hex-body');
+  tbody.innerHTML = '';
+  hexRows.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => selectHexRow(idx);
+    
+    const bytesHtml = row.bytes.map(b => `<span class="byte-cell ${row.cls}">${b}</span>`).join(' ');
+    const asciiStr = row.bytes.map(b => {
+      const code = parseInt(b, 16);
+      return (code >= 32 && code <= 126) ? String.fromCharCode(code) : '.';
+    }).join('');
+
+    tr.innerHTML = `
+      <td class="hex-addr">${row.offset}</td>
+      <td><div class="hex-bytes">${bytesHtml}</div></td>
+      <td class="hex-ascii">${row.interpretation}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function selectHexRow(idx) {
+  const item = hexRows[idx];
+  document.getElementById('dec-field').innerText = item.field;
+  document.getElementById('dec-va').innerText = item.va;
+  document.getElementById('dec-raw').innerText = item.raw;
+  document.getElementById('dec-typed').innerText = item.typed;
+}
+
+renderHexTable();
+
+// --- POINTER CHAIN STEPPING ---
+let currentPtrStep = 0;
+function stepPointerChain() {
+  currentPtrStep = (currentPtrStep + 1) % 4;
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`node-${i}`);
+    if (el) {
+      if (i === currentPtrStep) {
+        el.classList.add('active-step');
+      } else {
+        el.classList.remove('active-step');
+      }
+    }
+  }
+}
+function resetPointerChain() {
+  currentPtrStep = 0;
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`node-${i}`);
+    if (el) {
+      if (i === 0) el.classList.add('active-step');
+      else el.classList.remove('active-step');
+    }
+  }
+}
+
+// --- ADDRESS CHAIN CALCULATOR ---
+const presets = {
+  "52224": { seId: 52224, aeId: 53106, seRva: 0x8E6140, aeRva: 0x932F20, name: "Actor::GetCombatTarget", sig: "Actor*(*)(Actor*)" },
+  "19365": { seId: 19365, aeId: 19792, seRva: 0x2213F0, aeRva: 0x2352B0, name: "TESForm::GetFormID", sig: "uint32_t(*)(TESForm*)" },
+  "37609": { seId: 37609, aeId: 38556, seRva: 0x620130, aeRva: 0x654300, name: "PlayerCharacter::GetSingleton", sig: "PlayerCharacter*(*)()" },
+  "51421": { seId: 51421, aeId: 52288, seRva: 0x8BF100, aeRva: 0x90A4E0, name: "Actor::SetPosition", sig: "void(*)(Actor*, const NiPoint3&)" }
+};
+
+let currentPresetKey = "52224";
+
+function applyPresetAddress(key) {
+  currentPresetKey = key;
+  recalcAddress();
+}
+
+function randomizeASLR() {
+  const randomBase = 0x7FF700000000 + (Math.floor(Math.random() * 0xFFF) << 16);
+  document.getElementById('calc-base').value = "0x" + randomBase.toString(16).toUpperCase();
+  recalcAddress();
+}
+
+function recalcAddress() {
+  const baseStr = document.getElementById('calc-base').value.trim();
+  let baseVal = 0x7FF74E210000;
+  try {
+    baseVal = parseInt(baseStr, 16);
+    if (isNaN(baseVal)) baseVal = 0x7FF74E210000;
+  } catch(e) {
+    baseVal = 0x7FF74E210000;
+  }
+
+  const p = presets[currentPresetKey] || presets["52224"];
+  const rvaVal = p.seRva;
+  const runtimeVA = baseVal + rvaVal;
+
+  document.getElementById('math-base').innerText = "0x" + baseVal.toString(16).toUpperCase();
+  document.getElementById('math-rva').innerText = "0x" + rvaVal.toString(16).toUpperCase();
+  document.getElementById('math-va').innerText = "0x" + runtimeVA.toString(16).toUpperCase();
+
+  const codeEl = document.getElementById('calc-skse-code');
+  codeEl.innerHTML = `
+<span class="cm">// ${p.name} (SE ID: ${p.seId}, AE ID: ${p.aeId})</span>
+<span class="kw">inline static</span> <span class="type">REL::Relocation</span>&lt;<span class="type">${p.sig}</span>&gt; <span class="fn">${p.name.split('::').pop()}</span>{ <span class="type">REL::RelocationID</span>(<span class="num">${p.seId}</span>, <span class="num">${p.aeId}</span>) };
+  `;
+}
+recalcAddress();
+
+// --- TARGET DISCOVERY TECHNIQUES ---
+const discoveryTechniques = [
+  {
+    title: "Technique 1: Cross-Reference (XREF) Tracing",
+    desc: "Bethesda leaves debug strings and log messages in .rdata. We search for the string, follow cross-references (XREFs) to the caller function, and deduce the function's identity from the context of how it logs.",
+    code: `// 1. Search string in Ghidra: "Stealth Detected"
+// 2. XREF points to sub_1408E6280
+// 3. Decompile sub_1408E6280 -> reads a_actor + 0x0C0 flags
+// 4. Conclude: This is the unexported Stealth Detection evaluator!`
+  },
+  {
+    title: "Technique 2: Nearest-Neighbor ID Grep",
+    desc: "When a target function has no name in symbols-se.txt, we grep offsets-se.txt for the closest lower RVA. The distance between the known neighbor ID and the target gives us an anchor.",
+    code: `// Target RVA: 0x8E6280 (No name in symbols-se.txt)
+// Grep offsets-se.txt for closest RVA <= 0x8E6280:
+// Found ID 52224 (Actor::GetCombatTarget) at 0x8E6140
+// Target is at ID 52224 RVA + 0x140 bytes!`
+  },
+  {
+    title: "Technique 3: Vtable Virtual Slot Indexing",
+    desc: "Polymorphic Skyrim classes (like Actor, PlayerCharacter, TESForm) contain a pointer to their Virtual Method Table at offset +0x00. Ghidra recovers the RTTI class name. By counting 8-byte pointer slots, we map virtual overrides.",
+    code: `// Vtable for Actor (SE 1.5.97):
+// Slot 0x00 (+0x000): ~Actor destructor
+// Slot 0x01 (+0x008): GetFormID
+// Slot 0x3D (+0x1E8): GetPosition
+// Slot 0x3E (+0x1F0): UNNAMED TARGET -> (IsCombatActive virtual slot)`
+  },
+  {
+    title: "Technique 4: Dynamic Memory Diffing",
+    desc: "When reversing unknown member variables in memory, take a baseline memory snapshot with Live Introspection Bridge, stimulate the game (e.g. crouch or fire spell), and diff the memory to see which offset flips.",
+    code: `// 1. Snapshot Actor at 0x021A4B90F200 (Baseline: Standing)
+// 2. Command player to Sneak
+// 3. Snapshot Actor at 0x021A4B90F200 (Active: Sneaking)
+// 4. Diff reveals byte at offset +0x0C0 changed from 0x00 -> 0x02!`
+  }
+];
+
+function selectDiscoveryTechnique(idx) {
+  for (let i = 0; i < 4; i++) {
+    const card = document.getElementById(`disc-card-${i}`);
+    if (card) {
+      if (i === idx) card.classList.add('selected');
+      else card.classList.remove('selected');
+    }
+  }
+  const d = discoveryTechniques[idx] || discoveryTechniques[0];
+  document.getElementById('disc-title').innerText = d.title;
+  document.getElementById('disc-desc').innerText = d.desc;
+  document.getElementById('disc-code').innerHTML = d.code;
+}
+
+// --- LIVE DIFF SIMULATOR ---
+const diffBaseline = [
+  { off: "+0x000", val: "0x7FF74E6E4280", desc: "PlayerCharacter::vtable" },
+  { off: "+0x008", val: "0x00000014", desc: "formID (Player)" },
+  { off: "+0x0B8", val: "0x021A4B90F200", desc: "AIProcess* currentProcess" },
+  { off: "+0x0C0", val: "0x00000000", desc: "ActorState (Flags: NONE)" },
+  { off: "+0x0C4", val: "0x42C80000", desc: "Health Current (100.0f)" },
+  { off: "+0x0C8", val: "0x00000000", desc: "currentCombatTarget (NULL)" }
+];
+
+let diffCurrent = JSON.parse(JSON.stringify(diffBaseline));
+
+function renderDiffLists(changedOffsets = []) {
+  const baseEl = document.getElementById('diff-base-list');
+  const actEl = document.getElementById('diff-active-list');
+  
+  baseEl.innerHTML = '';
+  actEl.innerHTML = '';
+
+  diffBaseline.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'diff-row';
+    row.innerHTML = `<span>${item.off}</span><span>${item.val}</span><span style="color:var(--ink-muted);">${item.desc}</span>`;
+    baseEl.appendChild(row);
+  });
+
+  diffCurrent.forEach(item => {
+    const isChanged = changedOffsets.includes(item.off);
+    const row = document.createElement('div');
+    row.className = 'diff-row' + (isChanged ? ' changed' : '');
+    row.innerHTML = `<span>${item.off}</span><span>${item.val}</span><span>${item.desc} ${isChanged ? '⚡ CHANGED' : ''}</span>`;
+    actEl.appendChild(row);
+  });
+}
+
+function triggerStimulus(type) {
+  diffCurrent = JSON.parse(JSON.stringify(diffBaseline));
+  let changed = [];
+  let verdict = "";
+
+  if (type === 'sneak') {
+    diffCurrent[3].val = "0x00000002";
+    diffCurrent[3].desc = "ActorState (Flags: SNEAKING)";
+    changed = ["+0x0C0"];
+    verdict = "<b>Stimulus Result (Sneak):</b> Offset <code>+0x0C0</code> flipped from <code>0x00000000</code> to <code>0x00000002</code>. This isolates <code>ActorState::actorState</code> sneaking bit (bit 1)!";
+  } else if (type === 'weapon') {
+    diffCurrent[3].val = "0x00000001";
+    diffCurrent[3].desc = "ActorState (Flags: WEAPON_DRAWN)";
+    changed = ["+0x0C0"];
+    verdict = "<b>Stimulus Result (Draw Weapon):</b> Offset <code>+0x0C0</code> flipped to <code>0x00000001</code>. Bit 0 controls weapon drawn state.";
+  } else if (type === 'damage') {
+    diffCurrent[4].val = "0x42960000";
+    diffCurrent[4].desc = "Health Current (75.0f)";
+    changed = ["+0x0C4"];
+    verdict = "<b>Stimulus Result (Take Damage):</b> Float at offset <code>+0x0C4</code> changed from <code>100.0f (0x42C80000)</code> to <code>75.0f (0x42960000)</code>. This confirms the direct health float offset!";
+  }
+
+  renderDiffLists(changed);
+  document.getElementById('diff-verdict-text').innerHTML = verdict;
+}
+
+function resetStimulus() {
+  diffCurrent = JSON.parse(JSON.stringify(diffBaseline));
+  renderDiffLists([]);
+  document.getElementById('diff-verdict-text').innerHTML = "Select a stimulus above to watch Live Introspection Bridge capture and isolate the exact byte offset in the Actor struct!";
+}
+renderDiffLists([]);
+
+// --- REAL RE MISSION LOGIC ---
+function answerMission(step, opt) {
+  const fb = document.getElementById(`mfeedback-${step}`);
+  if (step === 1) {
+    if (opt === 1) {
+      fb.className = "step-feedback success";
+      fb.innerHTML = "✅ <b>Correct!</b> Grepping symbols gives you known anchors (like <code>Actor::GetCombatTarget</code> ID 52224) to orient your search.";
+      document.getElementById('mstep-1').classList.remove('active-step');
+      document.getElementById('mstep-1').classList.add('completed');
+      document.getElementById('mstep-2').classList.add('active-step');
+    } else {
+      fb.className = "step-feedback error";
+      fb.innerHTML = "❌ <b>Incorrect.</b> Never guess or brute force without establishing a known static anchor first.";
+    }
+  } else if (step === 2) {
+    if (opt === 2) {
+      fb.className = "step-feedback success";
+      fb.innerHTML = "✅ <b>Correct!</b> Strip image base &rarr; lookup RVA in <code>offsets-se.txt</code> &rarr; get Address Library ID &rarr; lookup in <code>offsets-ae.txt</code> to ensure dual-version compatibility.";
+      document.getElementById('mstep-2').classList.remove('active-step');
+      document.getElementById('mstep-2').classList.add('completed');
+      document.getElementById('mstep-3').classList.add('active-step');
+    } else {
+      fb.className = "step-feedback error";
+      fb.innerHTML = "❌ <b>Incorrect.</b> RVAs change between game updates! Always resolve through Address Library IDs.";
+    }
+  } else if (step === 3) {
+    if (opt === 1) {
+      fb.className = "step-feedback success";
+      fb.innerHTML = "✅ <b>Correct!</b> Using Live Introspection Bridge closes the loop between static Ghidra findings and actual runtime execution before writing any plugin hook code.";
+      document.getElementById('mstep-3').classList.remove('active-step');
+      document.getElementById('mstep-3').classList.add('completed');
+      document.getElementById('mstep-4').classList.add('active-step');
+      document.getElementById('mstep-4').classList.add('completed');
+    } else {
+      fb.className = "step-feedback error";
+      fb.innerHTML = "❌ <b>Incorrect.</b> Verify dynamically before shipping!";
+    }
+  }
+}
+</script>
+
+</body>
+</html>

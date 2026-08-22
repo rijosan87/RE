@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skyrim RE — The Mental Model</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171b21; --panel2:#1d222a; --ink:#e6e9ee; --muted:#9aa4b2;
+    --line:#2a313b; --accent:#5db0ff; --se:#62d394; --ae:#f0a35e; --danger:#ff6b6b;
+    --ok:#62d394; --code:#0b0e12; --warnbg:#2a1c1c; --warnln:#5a2d2d;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  code,kbd,.mono{font-family:"Cascadia Code",Consolas,"SF Mono",monospace}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 24px 120px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.3px}
+  h2{font-size:23px;margin:52px 0 14px;padding-top:14px;border-top:1px solid var(--line)}
+  h3{font-size:18px;margin:28px 0 8px;color:var(--accent)}
+  p{margin:12px 0}
+  .sub{color:var(--muted);margin-top:0}
+  a{color:var(--accent)}
+  .lead{font-size:18px;color:#cdd4de}
+
+  nav{position:sticky;top:0;background:rgba(15,18,22,.92);backdrop-filter:blur(6px);
+      border-bottom:1px solid var(--line);z-index:10;padding:12px 24px}
+  nav a{color:var(--muted);text-decoration:none;font-size:13px;margin-right:18px;white-space:nowrap}
+  nav a:hover{color:var(--ink)}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
+  .panel2{background:var(--panel2)}
+
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+      overflow:auto;font-size:13.5px;line-height:1.55;margin:14px 0}
+  pre .c{color:#6b7686}        /* comment   */
+  pre .k{color:#c792ea}        /* keyword   */
+  pre .n{color:#f0a35e}        /* number/id */
+  pre .s{color:#62d394}        /* string    */
+  pre .f{color:#5db0ff}        /* func/reg  */
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+
+  .se{color:var(--se)} .ae{color:var(--ae)} .danger{color:var(--danger)} .ok{color:var(--ok)}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;
+       border:1px solid var(--line);vertical-align:middle}
+  .tag.se{border-color:#2f5e44;background:#16271d;color:var(--se)}
+  .tag.ae{border-color:#5e442f;background:#271d16;color:var(--ae)}
+
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd4de;font-weight:600}
+  td.mono,th.mono{font-family:"Cascadia Code",Consolas,monospace;font-size:13px}
+
+  /* chain diagram */
+  .chain{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:18px 0}
+  .step{flex:1 1 150px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+        padding:12px 12px;cursor:pointer;transition:.15s;position:relative;min-width:140px}
+  .step:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .step .num{font-size:11px;color:var(--accent);font-weight:700}
+  .step .ttl{font-weight:600;margin:2px 0}
+  .step .mono{font-size:12px;color:var(--muted);word-break:break-all}
+  .arrow{display:flex;align-items:center;color:var(--muted);font-size:22px;padding:0 6px}
+  @media(max-width:720px){.arrow{display:none}.step{flex-basis:100%}}
+  .detail{display:none;margin-top:10px;padding:12px 14px;background:var(--code);
+          border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;font-size:14px}
+  .detail.open{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
+
+  .warn{background:var(--warnbg);border:1px solid var(--warnln);border-radius:10px;padding:14px 16px;margin:14px 0}
+  .warn b{color:var(--danger)}
+  .note{background:#16271d;border:1px solid #2f5e44;border-radius:10px;padding:14px 16px;margin:14px 0}
+  .note b{color:var(--ok)}
+
+  .kindcard{border-left:4px solid var(--accent)}
+  .kindcard.rva{border-color:#8a8f98}
+  .kindcard.id{border-color:var(--accent)}
+  .kindcard.off{border-color:#c792ea}
+  .kindcard.vt{border-color:var(--ae)}
+  .kindcard h3{margin-top:4px}
+  .small{font-size:13px;color:var(--muted)}
+
+  .check{list-style:none;padding:0;margin:10px 0}
+  .check li{padding:8px 0 8px 30px;position:relative;border-bottom:1px solid var(--line)}
+  .check li:before{content:"▸";position:absolute;left:6px;color:var(--accent)}
+  .check li:last-child{border-bottom:0}
+
+  .pill{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+
+  /* ---- detour byte view ---- */
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+  .btn{background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+       border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-size:14px;transition:.12s}
+  .btn:hover{border-color:var(--accent)}
+  .btn.active{border-color:var(--accent);background:#16222e;color:var(--accent)}
+  .memrow{display:flex;align-items:center;gap:14px;margin:10px 0}
+  .memlabel{width:150px;flex:0 0 150px;font-size:12px;color:var(--muted);text-align:right}
+  .bytes{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+  .byte{font-family:"Cascadia Code",Consolas,monospace;font-size:13px;padding:6px 7px;border-radius:6px;
+        background:var(--code);border:1px solid var(--line);min-width:34px;text-align:center;transition:.25s}
+  .byte.orig{color:#9aa4b2}
+  .byte.jmp{background:#2a1530;border-color:#5e2f5e;color:#e6a3ff}
+  .byte.saved{background:#16271d;border-color:#2f5e44;color:var(--se)}
+  .byte.dim{opacity:.32}
+  .stagecap{min-height:42px;font-size:14px;color:#cdd4de;background:var(--code);
+            border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;margin-top:6px}
+  .flow{font-size:13px;color:var(--muted);margin-top:8px}
+  .flow b{color:var(--accent)}
+
+  /* ---- invoke bridge ---- */
+  .bridge{display:grid;grid-template-columns:1fr 70px 1fr;gap:0;align-items:stretch;margin:18px 0}
+  @media(max-width:720px){.bridge{grid-template-columns:1fr}}
+  .side{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .side h4{margin:0 0 8px;font-size:14px}
+  .cpp h4{color:var(--accent)} .flash h4{color:#e6a3ff}
+  .gap{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;writing-mode:vertical-rl;text-orientation:mixed}
+  @media(max-width:720px){.gap{writing-mode:horizontal-tb;padding:8px 0}}
+  .blayer{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:7px 0;cursor:pointer;
+          background:var(--code);transition:.12s;font-size:13px}
+  .blayer:hover{border-color:var(--accent)}
+  .blayer.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .blayer .mono{font-size:12px;color:var(--muted)}
+  .bridgecap{min-height:40px}
+</style>
+</head>
+<body>
+<nav>
+  <a href="#top">Top</a>
+  <a href="#building">The building</a>
+  <a href="#kinds">4 address kinds</a>
+  <a href="#chain">The chain</a>
+  <a href="#fail">Failure modes</a>
+  <a href="#crash">Worked example</a>
+  <a href="#detour">Detour bytes</a>
+  <a href="#bridge">C++→Flash</a>
+  <a href="#checklist">Checklist</a>
+</nav>
+
+<div class="wrap" id="top">
+  <h1>Skyrim Reverse Engineering — The Mental Model</h1>
+  <p class="sub mono">F:\Modding\SkyrimDev\Brain\RE\re-mental-model.html · built from the Custom Map Markers SE/AE dual-build port</p>
+  <p class="lead">Everything in SKSE reverse engineering reduces to one question: <em>“where is the thing I want, and how do I talk to it?”</em> There are four kinds of “address” and one verification habit. Learn those and the rest is tooling.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="building">1. A building with no street signs</h2>
+  <p><code>SkyrimSE.exe</code> is a compiled binary. Every function and data structure is in there, but the <em>names</em> were stripped at compile time. So each function is just an address, like an apartment with no nameplate, only a unit number measured from the front door.</p>
+  <p>All of RE is about putting nameplates back on, and then knocking on the right door. When Bethesda ships a new version (<span class="tag se">SE 1.5.97</span> → <span class="tag ae">AE 1.6.1170</span>) they recompile, and every apartment moves. The same tenant now lives at a different unit number. That single fact is the source of almost every dual-build bug.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="kinds">2. The four kinds of “address”</h2>
+  <p>These are the entire vocabulary. Click nothing here, just absorb the four.</p>
+
+  <div class="panel kindcard rva">
+    <h3>① RVA — Relative Virtual Address <span class="pill">raw, version-specific</span></h3>
+    <p>The literal distance of a function from the start of the binary. <code class="ae">0xFAC020</code> = “0xFAC020 bytes in.” A street address that is just a distance from the door.</p>
+    <p class="small"><b>The catch:</b> recompiling shifts everything. ObjectInterface::Invoke is <code class="ae">0xFAC020</code> on AE but <code class="se">0xECA860</code> on SE. Hardcode a raw RVA and your plugin works on exactly one game version.</p>
+  </div>
+
+  <div class="panel kindcard id">
+    <h3>② Address Library ID — the RelocationID number <span class="pill">stable across versions</span></h3>
+    <p>The community maintains a database (the <code>versionlib</code> .bin files) mapping a <em>logical</em> function to its unit number per version: “UpdateHoveredMarker is <span class="se mono">52224</span> on SE and <span class="ae mono">53111</span> on AE.” The ID is the nameplate the building never had.</p>
+    <p class="small"><code class="f">REL::ID(n)</code> = “look up unit <span class="n">n</span> in the directory <em>for the version currently running</em>.” It hands back the right RVA automatically.</p>
+    <div class="warn"><b>This is exactly where our SE crash came from.</b> The plugin called <code class="f">REL::ID(<span class="ae">53111</span>)</code>. But 53111 is the <span class="ae">AE</span> directory’s number. On <span class="se">SE</span>, entry 53111 is a <em>different apartment</em> — a save/load function. Same number, different building, different tenant. Fix: <code class="f">REL::RelocationID(<span class="se">52224</span>, <span class="ae">53111</span>)</code> = “the same logical tenant, addressed correctly in each building.”</div>
+  </div>
+
+  <div class="panel kindcard off">
+    <h3>③ Struct field offset — <code>object + 0xNNN</code> <span class="pill">data, not code</span></h3>
+    <p>Functions are one thing; the <em>data</em> they touch is another. A live <code>MapMenu</code> object is a big struct, and the fields you want sit at fixed byte offsets inside it. <code>MapMenu + <span class="n">0x30558</span></code> = “the hovered-marker index lives 0x30558 bytes into the object.”</p>
+    <p class="small">These can also shift between versions if Bethesda adds or reorders fields. In our port, 3 of 4 MapMenu offsets were <em>identical</em> SE vs AE; only the array <em>count</em> moved: <code class="ae">+0x30478</code> → <code class="se">+0x30480</code>. We gated just that one with <code class="f">REL::Relocate(<span class="se">0x30480</span>, <span class="ae">0x30478</span>)</code>.</p>
+  </div>
+
+  <div class="panel kindcard vt">
+    <h3>④ Vtable slot — <code>CALL [RAX+0xE0]</code> <span class="pill">indirect, type-dependent</span></h3>
+    <p>A virtual function isn’t called by a fixed address. The object carries a little table of function pointers (its <em>vtable</em>), and the code says “call whatever sits in slot <code>0xE0</code> of this object’s table.” The actual target depends on the object’s real runtime type.</p>
+    <p class="small"><b>The catch:</b> the slot number is part of the class layout, which can shift between versions <em>and</em> between CommonLib-NG’s idea of the layout and the real binary. NG vtables have been seen off-by-one vs the engine. When you read <code>CALL [RAX+0xE0]</code> in a decompile, that’s a vtable dispatch — to know what it calls you must know the object’s type and walk its vtable in the actual binary, not trust the header.</p>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2 id="chain">3. How they chain together</h2>
+  <p>One hook is a walk through all four. Click each step to expand. This is the real chain for the hook that crashed.</p>
+
+  <div class="chain" id="chainDiagram">
+    <div class="step" data-k="d1">
+      <div class="num">STEP 1</div><div class="ttl">Want a function</div>
+      <div class="mono">UpdateHoveredMarker</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step" data-k="d2">
+      <div class="num">STEP 2</div><div class="ttl">Address Library ID</div>
+      <div class="mono"><span class="se">52224</span> / <span class="ae">53111</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step" data-k="d3">
+      <div class="num">STEP 3</div><div class="ttl">→ RVA → detour</div>
+      <div class="mono"><span class="se">0x8E6140</span> / <span class="ae">0x986360</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step" data-k="d4">
+      <div class="num">STEP 4</div><div class="ttl">Read struct offset</div>
+      <div class="mono">menu+0x30558</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step" data-k="d5">
+      <div class="num">STEP 5</div><div class="ttl">Vtable call into Flash</div>
+      <div class="mono">CALL [RAX+0xE0]</div>
+    </div>
+  </div>
+
+  <div class="detail" id="d1"><b>Want a function.</b> We want our code to run whenever the engine updates which vanilla map marker is under the cursor. That engine function has no name in the binary — only an address that differs per version. So we can’t hardcode it; we address it by its stable ID.</div>
+  <div class="detail" id="d2"><b>Address Library ID.</b> The logical function is <span class="se mono">SE 52224</span> / <span class="ae mono">AE 53111</span>. We write <code class="f">REL::RelocationID(52224, 53111)</code> — SE first, AE second (confirmed from CommonLib’s <code>Relocation.h</code> ctor order). At load, CommonLib picks the right one for the running runtime.</div>
+  <div class="detail" id="d3"><b>ID → RVA → detour.</b> The library converts the ID to the real memory address (<span class="se mono">0x8E6140</span> on SE). PolyHook then installs a <em>detour</em>: it overwrites the first few bytes of that function with a jump to our function, and copies the displaced bytes into a <em>trampoline</em> so we can still call the original. Now every time the engine runs UpdateHoveredMarker, ours runs too.</div>
+  <div class="detail" id="d4"><b>Read struct offset.</b> Our hook receives a pointer to the live <code>MapMenu</code> object. To learn which marker is hovered we read <code>menu + 0x30558</code> as an int32. To walk the marker array we read the data ptr at <code>+0x30470</code> and the count at <code class="ae">+0x30478</code>/<code class="se">+0x30480</code>. These are data offsets, a different addressing kind than the function id.</div>
+  <div class="detail" id="d5"><b>Vtable call into Flash.</b> To make the engine hide the description card, the path goes through a Scaleform “Invoke” bridge (<code>FxDelegate::Invoke</code> / <code>ObjectInterface::Invoke</code>), which we also address by ID. Internally that bridge does a vtable dispatch (<code>CALL [RAX+0xE0]</code>) to cross from C++ into the Flash/AS2 UI. That’s the C++→Flash boundary.</div>
+
+  <p class="small"><b>The one-line summary:</b> <code>ID → RVA → detour → struct offset → vtable call.</code> Every hook is some path through that. The “Invoke” functions are just the engine’s bridges from C++ into the Flash UI, addressed by ID, then dispatching by vtable.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="fail">4. Failure modes — why bugs hide</h2>
+  <p>The thread through all four kinds: <b class="danger">none of these errors throw a clean “not found.”</b> A wrong id, wrong offset, or wrong slot returns <em>plausible-looking garbage</em> that crashes later, somewhere else. That is why static decompiles are never enough.</p>
+
+  <table>
+    <tr><th>Kind</th><th>You search for</th><th>What you can silently get wrong</th><th>How it’s caught</th></tr>
+    <tr>
+      <td>① RVA</td><td class="mono">offset in .exe</td>
+      <td>Correct for exactly one version. Any bare RVA is a latent crash on the other build.</td>
+      <td>Replace with an ID pair; grep for stray raw RVAs / bare <code>REL::ID</code>.</td>
+    </tr>
+    <tr>
+      <td>② Address Library ID</td><td class="mono">SE/AE id pair</td>
+      <td class="danger">Using one version’s id on both. It resolves to <em>something</em> on the other version, so no error — just the wrong function. <span class="small">(Our crash.)</span></td>
+      <td>Read the resolved function and confirm it references the offsets/strings the real one should.</td>
+    </tr>
+    <tr>
+      <td>③ Struct offset</td><td class="mono">+0xNNN field</td>
+      <td>Assuming an offset matches across versions when it shifted. The read returns <em>a</em> number, just garbage.</td>
+      <td>Live-dump the field; sanity-check the value (small index? readable ptr? plausible count?).</td>
+    </tr>
+    <tr>
+      <td>④ Vtable slot</td><td class="mono">[RAX+0xN] index</td>
+      <td>Off-by-one between CommonLib-NG and the real binary, or the object isn’t the type you assumed → wrong virtual called.</td>
+      <td>Verify the slot in the actual binary, not the header.</td>
+    </tr>
+  </table>
+
+  <div class="warn"><b>The trap that connects them all:</b> wrong id, wrong offset, wrong slot — all return data that <em>looks</em> valid and crash elsewhere. The decompile tells you <em>where to look</em>; only the running game tells you <em>if you got it right</em>.</div>
+
+  <!-- ============================================================ -->
+  <h2 id="crash">5. Worked example — our actual SE crash</h2>
+  <p>The whole port reduced to spotting this in a crash log. Here is the trace from symptom to fix.</p>
+
+  <h3>The crash</h3>
+<pre><span class="c">; access violation, rcx = 0x28 (near-null)</span>
+SkyrimSE.exe+0ECA173  <span class="f">mov</span> rdx, [<span class="f">rcx</span>]          <span class="c">; deref a near-null GFxValue</span>
+SKSE_CustomMapMarkers.dll  <span class="f">GFxValue::GetMember</span>(<span class="s">"MarkerDescriptionObj"</span>)
+SKSE_CustomMapMarkers.dll  <span class="f">HoverImageRenderer::SampleCardState</span>(MapMenu*)
+SkyrimSE.exe  ... <span class="n">53115</span> / <span class="n">53204</span>   <span class="c">; these are SAVE-LOAD / VM funcs!</span>
+<span class="c">; RSP objects: BGSSaveLoadManager, LoadRequest, "VM is freezing..."</span></pre>
+
+  <div class="grid2">
+    <div class="panel panel2">
+      <h3 class="se">What the probe revealed</h3>
+      <p>A one-shot logger printed the <code>MapMenu*</code> our hook received:</p>
+<pre><span class="c">[SE-PROBE] MapMenu base =</span>
+  <span class="n">0x7ff66d747e80</span></pre>
+      <p class="small">That address is <em>inside</em> <code>SkyrimSE.exe</code>’s static data and matches the <code>SkyrimVM</code> global all over the crash stack. So <code>a_menu</code> wasn’t a MapMenu at all — it was the <b>SkyrimVM</b>.</p>
+    </div>
+    <div class="panel panel2">
+      <h3 class="danger">The diagnosis</h3>
+      <p>The hook installed on <code class="f">REL::ID(<span class="ae">53111</span>)</code>. On <span class="se">SE</span>, id 53111 is a save/load/VM function, not UpdateHoveredMarker. So our hook fired <em>during loading</em>, was handed the SkyrimVM, and <code>SampleCardState</code> read <code>SkyrimVM + 0x30540</code> as if it were a GFxValue → near-null deref → crash.</p>
+    </div>
+  </div>
+
+  <h3 class="ok">The fix</h3>
+<pre><span class="c">// before — AE id used on both builds</span>
+REL::Relocation&lt;std::uintptr_t&gt; target{ <span class="f">REL::ID</span>(<span class="ae">53111</span>) };
+
+<span class="c">// after — same logical fn, addressed per version</span>
+REL::Relocation&lt;std::uintptr_t&gt; target{ <span class="f">REL::RelocationID</span>(<span class="se">52224</span>, <span class="ae">53111</span>) };</pre>
+  <div class="note"><b>Note the deeper lesson:</b> the offset <code>+0x30540</code> was actually <em>correct</em> on both versions. The first instinct (“an offset is wrong”) was wrong. The bug was one level up — we were reading a correct offset on the <em>wrong object</em>, because the <em>id</em> resolved to the wrong function. Always ask which addressing kind is actually at fault before assuming it’s the one you touched last.</div>
+
+  <h3>How each SE twin was then confirmed (not guessed)</h3>
+  <p>For every id, the SE candidate was read and checked against what the real function must contain — the verify habit in action:</p>
+  <table>
+    <tr><th>Hook</th><th class="mono"><span class="ae">AE id</span></th><th class="mono"><span class="se">SE id</span></th><th>Confirmed by</th></tr>
+    <tr><td>UpdateHoveredMarker</td><td class="mono ae">53111</td><td class="mono se">52224</td><td>references +0x30558, +0x30540, +0x30470, +0x30480</td></tr>
+    <tr><td>OnMouseDown</td><td class="mono ae">53117</td><td class="mono se">52230</td><td>checks +0x3058c & +0x30558, calls FxDelegate::Invoke</td></tr>
+    <tr><td>FxDelegate::Invoke</td><td class="mono ae">82640</td><td class="mono se">80520</td><td>both SE twins call it at 0x140ed6ac0</td></tr>
+    <tr><td>IsMarkerVisible</td><td class="mono ae">53084</td><td class="mono se">52192</td><td>called in the inner marker loop, same position</td></tr>
+    <tr><td>ObjectInterface::Invoke</td><td class="mono ae">82256</td><td class="mono se">80233</td><td>fingerprint: 4 args, [RAX+0x98], vtable CALL [RAX+0xE0]</td></tr>
+  </table>
+  <p class="small">Same-on-both ids do exist (ScreenToWorldRay 70630, Compass 51668/51744) — but you only know that <em>by checking</em>, never by assuming.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="detour">6. What a detour actually does, byte by byte</h2>
+  <p>“We hook the function” hides a small surgery. PolyHook overwrites the first few bytes of the target with a jump to our code, and saves the bytes it clobbered into a <em>trampoline</em> so the original can still run. Step through it.</p>
+
+  <div class="btns" id="detourBtns">
+    <button class="btn active" data-s="0">0 · Original</button>
+    <button class="btn" data-s="1">1 · Save bytes</button>
+    <button class="btn" data-s="2">2 · Write jump</button>
+    <button class="btn" data-s="3">3 · Engine calls</button>
+    <button class="btn" data-s="4">4 · Our hook runs</button>
+    <button class="btn" data-s="5">5 · Call original</button>
+  </div>
+
+  <div class="panel">
+    <div class="memrow">
+      <div class="memlabel">target function<br><span class="mono se">0x8E6140</span></div>
+      <div class="bytes" id="targetBytes"></div>
+    </div>
+    <div class="memrow">
+      <div class="memlabel">trampoline<br><span class="mono">(heap)</span></div>
+      <div class="bytes" id="trampBytes"></div>
+    </div>
+    <div class="stagecap" id="detourCap"></div>
+    <div class="flow" id="detourFlow"></div>
+  </div>
+  <p class="small"><b>Why a trampoline exists:</b> writing the jump <em>destroys</em> the first instructions of the original. The trampoline holds a working copy of those bytes plus a jump back into the rest of the function, so our hook can still run the real engine code (this is how every <code>g_trampoline(...)</code> call in our hooks works). <b>Why the first bytes only:</b> a 64-bit jump needs ~12–14 bytes; PolyHook disassembles whole instructions so it never cuts one in half (that’s what the “Capstone disassembler” in each Install() is for).</p>
+
+  <!-- ============================================================ -->
+  <h2 id="bridge">7. The C++ → Flash bridge (the “Invoke” functions)</h2>
+  <p>The map UI is a Flash movie (Scaleform). Our hooks live in C++. The two <code>Invoke</code> functions are the doorways between those worlds — that’s all they are. Click each layer to see what it’s for.</p>
+
+  <div class="bridge">
+    <div class="side cpp">
+      <h4>C++ side (the engine / our plugin)</h4>
+      <div class="blayer on" data-b="b1">
+        <b>Our detour</b><div class="mono">on UpdateHoveredMarker / Invoke</div>
+      </div>
+      <div class="blayer" data-b="b2">
+        <b>FxDelegate::Invoke</b> <span class="tag se">80520</span><span class="tag ae">82640</span><div class="mono">native→Flash, by method name</div>
+      </div>
+      <div class="blayer" data-b="b3">
+        <b>ObjectInterface::Invoke</b> <span class="tag se">80233</span><span class="tag ae">82256</span><div class="mono">lower-level AS2 object call</div>
+      </div>
+    </div>
+    <div class="gap">vtable&nbsp;dispatch&nbsp;→</div>
+    <div class="side flash">
+      <h4>Flash side (the .swf UI movie)</h4>
+      <div class="blayer" data-b="b4">
+        <b>method name string</b><div class="mono">"SetSelectedMarker" · "MarkerDescriptionObj"</div>
+      </div>
+      <div class="blayer" data-b="b5">
+        <b>AS2 function on a clip</b><div class="mono">runs inside the movie</div>
+      </div>
+      <div class="blayer" data-b="b6">
+        <b>card shows / hides</b><div class="mono">the visible result</div>
+      </div>
+    </div>
+  </div>
+  <div class="stagecap bridgecap" id="bridgeCap">Click any layer to see its role.</div>
+
+  <p class="small"><b>The key insight:</b> the bridge is crossed by <em>method name</em>, a string, not a function address. That’s why <code>"SetSelectedMarker"</code> is itself an Address Library entry (<span class="tag se">270681</span><span class="tag ae">216427</span>): we resolve the string’s address so our detour can pointer-compare the name being invoked and act only on the one we care about. The crossing itself is a <b>vtable dispatch</b> (<code>CALL [RAX+0xE0]</code>) — addressing kind ④ from section 2, doing real work here.</p>
+
+  <!-- ============================================================ -->
+  <h2 id="checklist">8. The verify-live checklist</h2>
+  <p>Keep this open while doing RE. For every hook, after resolving the id, ask: <b>does the function / field / slot this resolves to actually look like what I expect, on this specific version?</b></p>
+
+  <div class="panel">
+  <ul class="check">
+    <li><b>ID →</b> Read the resolved function. Does it reference the struct offsets and strings the real one should? (If you wanted UpdateHoveredMarker, does it touch <code>+0x30558</code> and call IsMarkerVisible?)</li>
+    <li><b>Offset →</b> Live-dump it on the running game. Is the value sane — a small index, a readable pointer, a plausible count? Garbage means wrong offset <em>or</em> wrong object.</li>
+    <li><b>Vtable slot →</b> Verify the slot index in the actual binary, not the CommonLib header. Confirm the object’s real type first.</li>
+    <li><b>Raw RVA →</b> Treat any bare RVA or bare <code>REL::ID</code> as a latent other-version crash. Convert to a <code>RelocationID</code> pair.</li>
+    <li><b>Before blaming the thing you just edited →</b> identify <em>which addressing kind</em> is actually at fault. A correct offset on the wrong object looks identical to a wrong offset.</li>
+    <li><b>Confirmation bar →</b> “it compiles” and “the decompile looks right” are not confirmation. The running game is. Keep diagnostic logs in until in-game behavior proves the fix.</li>
+  </ul>
+  </div>
+
+  <div class="note"><b>The whole game in one sentence:</b> there are four ways to address a thing (RVA, ID, struct offset, vtable slot); each fails silently by returning plausible garbage; the static decompile shows you where to look and the running game tells you if you were right.</div>
+
+  <footer>
+    Built from the Custom Map Markers SE 1.5.97 + AE 1.6.1170 dual-build port.<br>
+    Real data: <span class="mono">findings/findings-SE-Hook-IDs.md</span>, <span class="mono">findings-SE-MapMenu-Offsets.md</span>, and the load crash logs.<br>
+    Self-contained — no network, no dependencies. Open in any browser.
+  </footer>
+</div>
+
+<script>
+  // Expand a chain step's detail; collapse others.
+  const steps = document.querySelectorAll('#chainDiagram .step');
+  steps.forEach(s=>{
+    s.addEventListener('click',()=>{
+      const id = s.getAttribute('data-k');
+      const target = document.getElementById(id);
+      const wasOpen = target.classList.contains('open');
+      document.querySelectorAll('.detail').forEach(d=>d.classList.remove('open'));
+      if(!wasOpen) target.classList.add('open');
+      if(!wasOpen) target.scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+  });
+
+  // ---- detour byte-level stepper ----
+  // Original first bytes of the target (illustrative real-shape opcodes).
+  const ORIG = ['40','53','41','56','48','83','EC','30','48','8B','D9','...'];
+  // The 64-bit jump PolyHook writes (FF 25 + rel ptr to our hook).
+  const JMP  = ['FF','25','00','00','00','00','&hook','&hook','&hook','&hook'];
+  const tgt = document.getElementById('targetBytes');
+  const trm = document.getElementById('trampBytes');
+  const cap = document.getElementById('detourCap');
+  const flow= document.getElementById('detourFlow');
+
+  function renderBytes(el, arr, cls){
+    el.innerHTML='';
+    arr.forEach(b=>{
+      const d=document.createElement('div');
+      d.className='byte '+(cls||'');
+      d.textContent=b;
+      el.appendChild(d);
+    });
+  }
+
+  const detSteps = [
+    {cap:'The function as the engine compiled it. The first instructions (prologue) are about to become our patch site.',
+     flow:'', target:()=>renderBytes(tgt,ORIG,'orig'), tramp:()=>{trm.innerHTML='<span class="small" style="color:#6b7686">empty</span>';}},
+    {cap:'PolyHook copies the bytes it’s about to overwrite into the trampoline first. Nothing is lost.',
+     flow:'<b>save</b> → the displaced prologue is now safe in heap memory',
+     target:()=>renderBytes(tgt,ORIG,'orig'),
+     tramp:()=>{renderBytes(trm,ORIG.slice(0,4).concat(['E9','→ rest']),'saved');}},
+    {cap:'Now it overwrites the start of the target with a jump to our hook. The original prologue here is gone — only the trampoline copy survives.',
+     flow:'<b>patch</b> → first bytes are now “jump to our function”',
+     target:()=>{renderBytes(tgt,JMP.concat(ORIG.slice(JMP.length)),''); paintJmp();},
+     tramp:()=>{renderBytes(trm,ORIG.slice(0,4).concat(['E9','→ rest']),'saved');}},
+    {cap:'The engine calls the function as it always did. It lands on the jump and is redirected to us.',
+     flow:'engine → target → <b>JMP</b> → our hook',
+     target:()=>{renderBytes(tgt,JMP.concat(ORIG.slice(JMP.length)),''); paintJmp();},
+     tramp:()=>{renderBytes(trm,ORIG.slice(0,4).concat(['E9','→ rest']),'saved');}},
+    {cap:'Our HookedUpdateHoveredMarker runs. We can inspect args, read struct offsets, decide whether to suppress something.',
+     flow:'our code runs — read menu+0x30558, check Ctrl, etc.',
+     target:()=>{renderBytes(tgt,JMP.concat(ORIG.slice(JMP.length)),''); paintJmp();},
+     tramp:()=>{renderBytes(trm,ORIG.slice(0,4).concat(['E9','→ rest']),'saved');}},
+    {cap:'To run the real function we call the trampoline: the saved prologue executes, then it jumps back into the untouched rest of the original. The engine never notices.',
+     flow:'our hook → <b>g_trampoline()</b> → saved bytes → JMP back into the original body',
+     target:()=>{renderBytes(tgt,JMP.concat(ORIG.slice(JMP.length)),'dim'); paintJmp(true);},
+     tramp:()=>{renderBytes(trm,ORIG.slice(0,4).concat(['E9','→ rest']),'saved');}},
+  ];
+  function paintJmp(dim){
+    [...tgt.children].forEach((c,i)=>{ if(i<JMP.length){c.classList.add('jmp'); if(dim)c.classList.remove('dim');}});
+  }
+  function setDetour(i){
+    document.querySelectorAll('#detourBtns .btn').forEach(b=>b.classList.toggle('active',+b.dataset.s===i));
+    detSteps[i].target(); detSteps[i].tramp();
+    cap.textContent=detSteps[i].cap; flow.innerHTML=detSteps[i].flow;
+  }
+  document.querySelectorAll('#detourBtns .btn').forEach(b=>b.addEventListener('click',()=>setDetour(+b.dataset.s)));
+  setDetour(0);
+
+  // ---- invoke bridge ----
+  const bridgeInfo = {
+    b1:'Our detour sits on the C++ side. From here we can decide to let the engine drive the Flash UI, or rewrite an argument before it does.',
+    b2:'FxDelegate::Invoke is the high-level native→Flash call: “run this AS2 method by name on the movie.” We hook it to filter by the method name and act only on the calls we care about.',
+    b3:'ObjectInterface::Invoke is the lower-level AS2 object-method call (distinct function from FxDelegate). Same idea, different layer; the local-map path uses this one.',
+    b4:'The bridge is crossed by a method-NAME string, not an address. So the string itself ("SetSelectedMarker") is an Address Library entry we resolve, then pointer-compare against the name being invoked.',
+    b5:'On the Flash side, the named method is a real ActionScript 2 function living on a movie clip. It executes inside the .swf, where C++ can’t reach directly.',
+    b6:'The visible effect: the description card shows or hides. That’s why suppressing the card means intercepting the invoke before it reaches this point.'
+  };
+  document.querySelectorAll('.blayer').forEach(l=>{
+    l.addEventListener('click',()=>{
+      document.querySelectorAll('.blayer').forEach(x=>x.classList.remove('on'));
+      l.classList.add('on');
+      document.getElementById('bridgeCap').textContent=bridgeInfo[l.dataset.b];
+    });
+  });
+</script>
+</body>
+</html>

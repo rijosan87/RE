@@ -1,0 +1,514 @@
+<title>The Address Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Source+Sans+3:wght@400;600&display=swap">
+
+<style>
+:root{
+  --ground:#faf9f7;
+  --surface:#ffffff;
+  --sunk:#f1efec;
+  --line:#ddd8d1;
+  --ink:#1b1f24;
+  --ink-soft:#5c6570;
+  --ink-faint:#8c949e;
+  --accent:#b26a00;
+  --accent-soft:#f5e6cd;
+  --danger:#b03a30;
+  --danger-soft:#f7e1de;
+  --verified:#2f7d55;
+  --verified-soft:#dcefe3;
+  --shadow:0 1px 2px rgba(27,31,36,.06),0 6px 18px rgba(27,31,36,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0f1216;
+    --surface:#171b21;
+    --sunk:#12161b;
+    --line:#2a313a;
+    --ink:#d3dae2;
+    --ink-soft:#98a3b0;
+    --ink-faint:#6b7683;
+    --accent:#e8a33d;
+    --accent-soft:#3a2c14;
+    --danger:#e07268;
+    --danger-soft:#3a1e1b;
+    --verified:#63b587;
+    --verified-soft:#152e21;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0f1216;
+  --surface:#171b21;
+  --sunk:#12161b;
+  --line:#2a313a;
+  --ink:#d3dae2;
+  --ink-soft:#98a3b0;
+  --ink-faint:#6b7683;
+  --accent:#e8a33d;
+  --accent-soft:#3a2c14;
+  --danger:#e07268;
+  --danger-soft:#3a1e1b;
+  --verified:#63b587;
+  --verified-soft:#152e21;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Source Sans 3",system-ui,-apple-system,Segoe UI,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+code,.mono{font-family:"JetBrains Mono",Cascadia Code,Consolas,ui-monospace,monospace}
+
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+section{padding:60px 0;border-top:1px solid var(--line)}
+section:first-of-type{border-top:0}
+
+/* ---------- hero ---------- */
+.hero{padding:76px 0 60px}
+.eyebrow{
+  font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin:0 0 18px
+}
+h1{
+  font-family:"JetBrains Mono",monospace;font-weight:800;
+  font-size:clamp(30px,5.4vw,54px);line-height:1.04;letter-spacing:-.02em;
+  margin:0 0 22px;text-wrap:balance
+}
+.lede{font-size:19px;color:var(--ink-soft);max-width:60ch;margin:0}
+.lede b{color:var(--ink);font-weight:600}
+
+h2{
+  font-family:"JetBrains Mono",monospace;font-weight:700;
+  font-size:22px;letter-spacing:-.01em;margin:0 0 8px;text-wrap:balance
+}
+.sub{color:var(--ink-soft);margin:0 0 30px;max-width:62ch;font-size:15px}
+
+/* ---------- chain ---------- */
+.chain{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px
+}
+@media(max-width:820px){.chain{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.chain{grid-template-columns:1fr}}
+
+.node{
+  position:relative;text-align:left;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:16px 16px 18px;color:inherit;font:inherit;
+  transition:border-color .18s,transform .18s,box-shadow .18s;
+}
+.node:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.node:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.node[aria-pressed="true"]{border-color:var(--accent);box-shadow:var(--shadow)}
+.node[aria-pressed="true"]::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--accent)
+}
+.node .idx{
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:.16em;color:var(--ink-faint);display:block;margin-bottom:9px
+}
+.node[aria-pressed="true"] .idx{color:var(--accent)}
+.node .nm{
+  font-family:"JetBrains Mono",monospace;font-weight:700;font-size:15px;
+  display:block;margin-bottom:5px;letter-spacing:-.01em
+}
+.node .what{font-size:13px;color:var(--ink-soft);display:block;line-height:1.4}
+.node .holds{
+  font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint);
+  display:block;margin-top:11px;padding-top:9px;border-top:1px dashed var(--line)
+}
+
+.readout{
+  background:var(--sunk);border:1px solid var(--line);border-radius:3px;
+  padding:22px 24px;min-height:132px
+}
+.readout .rlabel{
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 10px
+}
+.readout p{margin:0 0 12px;font-size:15px;max-width:70ch}
+.readout p:last-child{margin-bottom:0}
+.readout .trust{
+  display:inline-block;font-family:"JetBrains Mono",monospace;font-size:11px;
+  font-weight:700;padding:3px 9px;border-radius:2px;letter-spacing:.04em
+}
+.t-high{background:var(--verified-soft);color:var(--verified)}
+.t-mid{background:var(--accent-soft);color:var(--accent)}
+.t-low{background:var(--danger-soft);color:var(--danger)}
+
+/* ---------- router ---------- */
+.router{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media(max-width:760px){.router{grid-template-columns:1fr}}
+.rcol .rhead{
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px
+}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{
+  text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:3px;padding:11px 14px;cursor:pointer;color:inherit;
+  font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500;
+  transition:border-color .15s,background .15s;
+}
+.opt:hover{border-color:var(--accent)}
+.opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700}
+.opt .oh{display:block;font-family:"Source Sans 3",sans-serif;font-size:12px;font-weight:400;color:var(--ink-faint);margin-top:3px}
+.opt[aria-pressed="true"] .oh{color:var(--accent)}
+
+.answer{
+  grid-column:1/-1;background:var(--sunk);border:1px solid var(--line);
+  border-radius:3px;padding:22px 24px;min-height:110px
+}
+.answer .atool{
+  font-family:"JetBrains Mono",monospace;font-weight:700;font-size:17px;
+  color:var(--accent);margin:0 0 8px;word-break:break-all
+}
+.answer .awhy{margin:0;font-size:15px;color:var(--ink-soft);max-width:72ch}
+.answer .aplaceholder{color:var(--ink-faint);font-size:15px;margin:0}
+
+/* ---------- trap ---------- */
+.trap{border:1px solid var(--danger);border-radius:3px;overflow:hidden}
+.trapbar{
+  background:var(--danger-soft);padding:14px 22px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  border-bottom:1px solid var(--danger)
+}
+.trapbar .tt{
+  font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;color:var(--danger)
+}
+.toggle{display:flex;gap:0;border:1px solid var(--danger);border-radius:2px;overflow:hidden}
+.toggle button{
+  font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;
+  padding:6px 18px;border:0;cursor:pointer;background:transparent;color:var(--danger);
+  transition:background .15s,color .15s
+}
+.toggle button:focus-visible{outline:2px solid var(--danger);outline-offset:-2px}
+.toggle button[aria-pressed="true"]{background:var(--danger);color:var(--ground)}
+.trapbody{padding:26px 24px;background:var(--surface)}
+.lookup{
+  display:grid;grid-template-columns:auto 1fr;gap:10px 20px;align-items:baseline;
+  font-family:"JetBrains Mono",monospace;font-size:14px;margin:0 0 20px
+}
+.lookup dt{color:var(--ink-faint);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.lookup dd{margin:0;font-weight:700;word-break:break-all}
+.lookup dd.bad{color:var(--danger)}
+.lookup dd.ok{color:var(--verified)}
+.verdict{
+  font-size:15px;margin:0;padding:14px 16px;border-radius:3px;max-width:74ch;
+  background:var(--sunk);border-left:2px solid var(--danger)
+}
+.verdict.ok{border-left-color:var(--verified)}
+
+/* ---------- ladder ---------- */
+.ladder{display:flex;flex-direction:column;gap:2px}
+.rung{
+  display:grid;grid-template-columns:120px 1fr auto;gap:20px;align-items:center;
+  padding:15px 18px;background:var(--surface);border:1px solid var(--line);
+  border-radius:3px;
+}
+@media(max-width:700px){.rung{grid-template-columns:1fr;gap:6px}}
+.rung .rname{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:14px}
+.rung .rwhat{font-size:14px;color:var(--ink-soft)}
+.rung .rcost{
+  font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint);
+  white-space:nowrap;letter-spacing:.04em
+}
+.ladder-note{font-size:14px;color:var(--ink-soft);margin:18px 0 0;max-width:70ch}
+
+/* ---------- close ---------- */
+.rule{
+  background:var(--surface);border:1px solid var(--line);border-left:2px solid var(--accent);
+  border-radius:3px;padding:24px 26px;margin-bottom:12px
+}
+.rule p{margin:0;font-size:17px;max-width:66ch}
+.rule .rk{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--accent)}
+footer{padding:36px 0 60px;color:var(--ink-faint);font-size:13px}
+footer a{color:var(--ink-soft)}
+
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+  .node:hover{transform:none}
+}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Skyrim RE · routing layer</p>
+    <h1>The Address Chain</h1>
+    <p class="lede">You want to call a function inside <code>SkyrimSE.exe</code>. It exports nothing. So every problem in this project reduces to one question: <b>what is its address, and how much do I trust the answer?</b></p>
+  </header>
+
+  <!-- ============ 1. THE FOUR ARTIFACTS ============ -->
+  <section>
+    <h2>Four artifacts, one loop</h2>
+    <p class="sub">Each holds a different piece. None holds all of it. Click one to see what it gives you and what it still owes you.</p>
+
+    <div class="chain" id="chain"></div>
+    <div class="readout" id="readout" aria-live="polite"></div>
+  </section>
+
+  <!-- ============ 2. ROUTER ============ -->
+  <section>
+    <h2>Which tool</h2>
+    <p class="sub">Pick what you already have, then what you need. The tool falls out of the pair.</p>
+
+    <div class="router">
+      <div class="rcol">
+        <p class="rhead">I have</p>
+        <div class="opts" id="haveOpts"></div>
+      </div>
+      <div class="rcol">
+        <p class="rhead">I want</p>
+        <div class="opts" id="wantOpts"></div>
+      </div>
+      <div class="answer" id="answer" aria-live="polite">
+        <p class="aplaceholder">Pick one from each column.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. THE TRAP ============ -->
+  <section>
+    <h2>The trap, with real numbers</h2>
+    <p class="sub">An id is a row number, not an identity. Nothing validates that row <em>n</em> means the same function in both tables. Same id, two tables — flip it.</p>
+
+    <div class="trap">
+      <div class="trapbar">
+        <span class="tt">id 406154</span>
+        <div class="toggle" role="group" aria-label="Which version table">
+          <button type="button" data-ver="AE" aria-pressed="true">AE 1.6.1170</button>
+          <button type="button" data-ver="SE" aria-pressed="false">SE 1.5.97</button>
+        </div>
+      </div>
+      <div class="trapbody">
+        <dl class="lookup" id="trapLookup"></dl>
+        <p class="verdict" id="trapVerdict"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. LADDER ============ -->
+  <section>
+    <h2>The confidence ladder</h2>
+    <p class="sub">Each step down is slower and more certain. Go top-down. Stop as soon as you have enough — and go one lower exactly when being wrong would be expensive.</p>
+    <div class="ladder" id="ladder"></div>
+    <p class="ladder-note">A hit at the top ends the chain instantly. An <em>absence</em> at the top is also information: nobody ever verified this one, so everything below is unverified territory.</p>
+  </section>
+
+  <!-- ============ 5. CLOSE ============ -->
+  <section>
+    <div class="rule"><p><span class="rk">An id is a coordinate, not an identity.</span></p></div>
+    <div class="rule"><p><span class="rk">Names</span> come from CommonLib (few, human-checked) or Ghidra (many, machine-guessed). <span class="rk">Addresses</span> come from Address Library. <span class="rk">Meaning</span> comes only from reading instructions. <span class="rk">Truth</span> comes only from the running process.</p></div>
+    <div class="rule"><p>Resolving cleanly proves the id <span class="rk">exists</span>, never that it is <span class="rk">what the finding claims</span>.</p></div>
+  </section>
+
+  <footer>
+    Companion to <a href="re-mental-model.html">re-mental-model.html</a>, which covers what the four <em>kinds</em> of address are (RVA, id, struct offset, vtable slot). This page covers where they come from and which tool to ask.
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- 1. artifacts ---------------- */
+const ARTIFACTS = [
+  {
+    idx:"ARTIFACT 01", nm:"SkyrimSE.exe", what:"The binary. Ground truth.",
+    holds:"holds → machine code",
+    trust:["t-high","GROUND TRUTH"],
+    body:[
+      "The only thing that is actually true. Machine code, zero names. A function sits at some distance from the file start — that is its <b>RVA</b>. Loaded, it lives at <code>0x140000000 + rva</code>.",
+      "Owes you: everything else. It will not tell you what anything is called."
+    ]
+  },
+  {
+    idx:"ARTIFACT 02", nm:"Address Library", what:"id → rva. The only thing that crosses versions.",
+    holds:"holds → id ↔ rva, per version",
+    trust:["t-low","UNVERIFIED PAIRING"],
+    body:[
+      "Someone mechanically matched functions between SE 1.5.97 and AE 1.6.1170 and numbered them. Id <code>52224</code> means the same function in both, even though the RVA moved.",
+      "Owes you: <b>meaning</b>. An id is a row number. Nothing checks that row <em>n</em> is the same function in both tables — roughly <b>72%</b> of entries hit that trap. This is the source of ruled-out items 9 and 17."
+    ]
+  },
+  {
+    idx:"ARTIFACT 03", nm:"Ghidra symbols", what:"rva → name. Machine-recovered.",
+    holds:"holds → SE ~98k names · AE ~22k",
+    trust:["t-mid","PLAUSIBLE, NOT CHECKED"],
+    body:[
+      "Ghidra recovered names from RTTI strings and vtables, dumped flat to <code>symbols-se.txt</code> / <code>symbols-ae.txt</code>. SE has ~98k named, AE only ~22k — SE had a debug-symbol leak, AE did not.",
+      "That asymmetry is why you sometimes look a thing up on SE and hop the id across. Owes you: <b>verification</b>. Recovered names are plausible, not confirmed."
+    ]
+  },
+  {
+    idx:"ARTIFACT 04", nm:"CommonLibSSE-NG", what:"name → id pair. Human-curated.",
+    holds:"holds → RE/Offsets*.h constants",
+    trust:["t-high","HUMAN-VERIFIED"],
+    body:[
+      "People decided, over years, that a given id pair is <code>Actor::AddSpell</code>, wrote it into <code>RE/Offsets*.h</code>, and wrapped it in a typed C++ call. Small set, high confidence, because a human checked each one.",
+      "Owes you: <b>coverage</b>. It names only a fraction of the binary. Absence here is not failure — it is a confirmed 'nobody verified this', which is a real reason to open Ghidra."
+    ]
+  }
+];
+
+const chainEl = document.getElementById("chain");
+const readoutEl = document.getElementById("readout");
+
+ARTIFACTS.forEach((a,i)=>{
+  const b=document.createElement("button");
+  b.type="button"; b.className="node"; b.setAttribute("aria-pressed","false");
+  b.innerHTML=`<span class="idx">${a.idx}</span><span class="nm">${a.nm}</span>`+
+              `<span class="what">${a.what}</span><span class="holds">${a.holds}</span>`;
+  b.addEventListener("click",()=>selectArtifact(i));
+  chainEl.appendChild(b);
+});
+
+function selectArtifact(i){
+  const a=ARTIFACTS[i];
+  [...chainEl.children].forEach((n,j)=>n.setAttribute("aria-pressed",j===i?"true":"false"));
+  readoutEl.innerHTML =
+    `<p class="rlabel">${a.nm} <span class="trust ${a.trust[0]}">${a.trust[1]}</span></p>`+
+    a.body.map(p=>`<p>${p}</p>`).join("");
+}
+selectArtifact(0);
+
+/* ---------------- 2. router ---------------- */
+const HAVE=[
+  {k:"name",   t:"a name",            h:"Actor::AddSpell, Compass"},
+  {k:"id",     t:"an id",             h:"52224, 406154 — from a findings file"},
+  {k:"rva",    t:"an rva / address",  h:"0x8E6140"},
+  {k:"nothing",t:"a hypothesis",      h:"I think this function does X"}
+];
+const WANT=[
+  {k:"pair",   t:"a RelocationID pair", h:"paste-ready, both runtimes"},
+  {k:"name",   t:"what it is called",   h:"identify the thing"},
+  {k:"does",   t:"what it does inside",  h:"internals, fields, args"},
+  {k:"true",   t:"is it true right now", h:"live process"}
+];
+
+const ROUTES={
+  "name|pair":["mcp__Skyrim-CommonLibSSE-MCP__find_offset",
+    "Step 0, always. Returns a paste-ready <code>REL::RelocationID(se, ae)</code> plus the header path, human-verified. If it hits, you are done — no RE at all. If it comes back absent, that is confirmed, and you drop to <code>resolve_address</code>."],
+  "name|name":["mcp__Skyrim-CommonLibSSE-MCP__find_offset → resolve_address",
+    "Try CommonLib first: ~77% of these appear only as <code>X::sub</code> in the raw dumps, so it is the only source that gives a real name. Miss → <code>resolve_address</code>, or grep <code>symbols-se.txt</code> (richer than AE)."],
+  "name|does":["grep symbols-*.txt → Ghidra",
+    "Get the rva first, then decompile. Ghidra is the only tool that reads actual instructions. Keep full re-decompiles in the RE chat — they flood context."],
+  "name|true":["mcp__Live-Introspection-Bridge__trace_calls",
+    "Arm it and see whether the function fires at all, who called it, and with what args. Seconds, versus a rebuild round."],
+
+  "id|pair":["mcp__Skyrim-CommonLibSSE-MCP__find_offset (by id)",
+    "The id direction tells you which constant owns it <b>and warns when that id means a different function on the other runtime</b>. That is ruled-out item 17, mechanized. Run it before writing through any id from a findings file."],
+  "id|name":["mcp__Live-Introspection-Bridge__resolve_address",
+    "Returns the SE and AE rows together. Watch for an SE twin named <code>UNWIND_INFO_*</code> or <code>FID_*</code> — that means metadata, not a function, and the id is not portable."],
+  "id|does":["resolve_address → Ghidra",
+    "Id gives you the rva; only Ghidra tells you what the code does. Do this before treating any id as a flag or a global."],
+  "id|true":["mcp__Live-Introspection-Bridge__dump_memory",
+    "Look at the actual bytes before writing through it. A bool's neighbourhood should not hold class-name strings, vtable pointers, or float constant tables. This is the check that caught both bad render-gate globals."],
+
+  "rva|pair":["grep offsets-se.txt / offsets-ae.txt",
+    "Strip the image base, then <code>awk -F'\\t' '$2==\"8e6140\"'</code> to read the id. Do it in <b>both</b> files — that is where the pair comes from. Never ship a raw RVA."],
+  "rva|name":["grep symbols-se.txt / symbols-ae.txt",
+    "Addresses in these files already include the image base (<code>1408e6140</code>). SE names ~98k, AE ~22k, so look up on SE and hop the id when AE comes back blank."],
+  "rva|does":["Ghidra",
+    "The only answer. Decompile it. Everything above this line was routing; this is the first tool that reads instructions."],
+  "rva|true":["mcp__Live-Introspection-Bridge__dump_memory",
+    "Module-relative targets resolve against the live ASLR base, so no hand math. Note: reads go stale while the game is <b>paused</b>, with no staleness flag — believe the user over a paused read."],
+
+  "nothing|pair":["Write the task file first",
+    "You do not have enough for an address yet. Name the function you are looking for, then re-enter at 'a name'."],
+  "nothing|name":["mcp__Skyrim-CommonLibSSE-MCP__search_concepts",
+    "Search CommonLib by concept to find what the thing is even called. Naming it converts this into a 'name' lookup."],
+  "nothing|does":["Ghidra, in the RE chat",
+    "Open a <code>task/RETask-*.md</code>, do the RE there, land one <code>findings/findings-*.md</code>. Keeps the decompile flood out of the impl chat."],
+  "nothing|true":["mcp__Live-Introspection-Bridge__trace_calls / watch_write",
+    "Bridge-first. Confirm the target actually fires or writes before spending a decompile on it. Wrong hypotheses cost seconds, not a rebuild."]
+};
+
+let have=null, want=null;
+const answerEl=document.getElementById("answer");
+
+function mkOpts(list,container,setter){
+  list.forEach(o=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="opt"; b.setAttribute("aria-pressed","false");
+    b.innerHTML=`${o.t}<span class="oh">${o.h}</span>`;
+    b.addEventListener("click",()=>{
+      setter(o.k);
+      [...container.children].forEach(c=>c.setAttribute("aria-pressed","false"));
+      b.setAttribute("aria-pressed","true");
+      render();
+    });
+    container.appendChild(b);
+  });
+}
+mkOpts(HAVE,document.getElementById("haveOpts"),v=>have=v);
+mkOpts(WANT,document.getElementById("wantOpts"),v=>want=v);
+
+function render(){
+  if(!have||!want){
+    answerEl.innerHTML='<p class="aplaceholder">Pick one from each column.</p>';
+    return;
+  }
+  const r=ROUTES[have+"|"+want];
+  answerEl.innerHTML=`<p class="atool">${r[0]}</p><p class="awhy">${r[1]}</p>`;
+}
+
+/* ---------------- 3. trap ---------------- */
+const TRAP={
+  AE:{
+    rows:[["table","offsets-ae.txt · AE 1.6.1170"],
+          ["resolves to","0x31AD490"],
+          ["what lives there","compass data global"]],
+    cls:"ok",
+    verdict:"<b>Correct — as the AE half only.</b> This id is live in <code>CompassHook.cpp</code> as the AE side of <code>RelocationID(519611, 406154)</code>, gated as <code>kCompassBufferID</code>. The number was never wrong.",
+    vclass:"ok"
+  },
+  SE:{
+    rows:[["table","offsets-se.txt · SE 1.5.97"],
+          ["resolves to","UNWIND_INFO_141bab124"],
+          ["what lives there","exception-handling metadata"]],
+    cls:"bad",
+    verdict:"<b>Same number. Different table. Different meaning.</b> Not a global, not even code — unwind metadata. It resolves cleanly, compiles fine, and hands you a valid address to the wrong thing. Nothing in the chain validates this. You find out by CTD, or by silent nonsense.",
+    vclass:""
+  }
+};
+
+const lookupEl=document.getElementById("trapLookup");
+const verdictEl=document.getElementById("trapVerdict");
+const toggleBtns=[...document.querySelectorAll(".toggle button")];
+
+function showTrap(ver){
+  const d=TRAP[ver];
+  toggleBtns.forEach(b=>b.setAttribute("aria-pressed",b.dataset.ver===ver?"true":"false"));
+  lookupEl.innerHTML=d.rows.map(([k,v],i)=>
+    `<dt>${k}</dt><dd class="${i>0?d.cls:''}">${v}</dd>`).join("");
+  verdictEl.className="verdict "+d.vclass;
+  verdictEl.innerHTML=d.verdict;
+}
+toggleBtns.forEach(b=>b.addEventListener("click",()=>showTrap(b.dataset.ver)));
+showTrap("AE");
+
+/* ---------------- 4. ladder ---------------- */
+const LADDER=[
+  ["CommonLib","A human verified this pairing. Safest answer available.","find_offset · instant"],
+  ["Address Library","Fast, mechanical, unverified. Gives an address, never a meaning.","resolve_address · instant"],
+  ["Ghidra","Reads the actual instructions. The only way to verify a pair is real.","decompile · slow, RE chat"],
+  ["Live process","Whether it is true in the running game. The only claim that finally matters.","bridge · needs the game"]
+];
+const ladderEl=document.getElementById("ladder");
+LADDER.forEach(([n,w,c])=>{
+  const d=document.createElement("div");
+  d.className="rung";
+  d.innerHTML=`<span class="rname">${n}</span><span class="rwhat">${w}</span><span class="rcost">${c}</span>`;
+  ladderEl.appendChild(d);
+});
+</script>

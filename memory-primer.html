@@ -1,0 +1,508 @@
+<title>What Is Actually In Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Source+Sans+3:wght@400;600&display=swap">
+
+<style>
+:root{
+  --ground:#faf9f7; --surface:#fff; --sunk:#f1efec; --line:#ddd8d1;
+  --ink:#1b1f24; --ink-soft:#5c6570; --ink-faint:#8c949e;
+  --accent:#b26a00; --accent-soft:#f5e6cd;
+  --code:#2f6f8f; --code-soft:#dceaf1;
+  --data:#7a4a8c; --data-soft:#eee0f3;
+  --danger:#b03a30; --danger-soft:#f7e1de;
+  --ok:#2f7d55; --ok-soft:#dcefe3;
+  --shadow:0 1px 2px rgba(27,31,36,.06),0 6px 18px rgba(27,31,36,.05);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0f1216; --surface:#171b21; --sunk:#12161b; --line:#2a313a;
+  --ink:#d3dae2; --ink-soft:#98a3b0; --ink-faint:#6b7683;
+  --accent:#e8a33d; --accent-soft:#3a2c14;
+  --code:#6fb4d6; --code-soft:#16303c;
+  --data:#c08fd6; --data-soft:#2b1c33;
+  --danger:#e07268; --danger-soft:#3a1e1b;
+  --ok:#63b587; --ok-soft:#152e21;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0f1216; --surface:#171b21; --sunk:#12161b; --line:#2a313a;
+  --ink:#d3dae2; --ink-soft:#98a3b0; --ink-faint:#6b7683;
+  --accent:#e8a33d; --accent-soft:#3a2c14;
+  --code:#6fb4d6; --code-soft:#16303c;
+  --data:#c08fd6; --data-soft:#2b1c33;
+  --danger:#e07268; --danger-soft:#3a1e1b;
+  --ok:#63b587; --ok-soft:#152e21;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Source Sans 3",system-ui,sans-serif;font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+code,.mono{font-family:"JetBrains Mono",Cascadia Code,Consolas,ui-monospace,monospace}
+.wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+section{padding:58px 0;border-top:1px solid var(--line)}
+
+.hero{padding:74px 0 56px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin:0 0 18px}
+h1{font-family:"JetBrains Mono",monospace;font-weight:800;
+  font-size:clamp(29px,5.2vw,50px);line-height:1.05;letter-spacing:-.02em;
+  margin:0 0 22px;text-wrap:balance}
+.lede{font-size:19px;color:var(--ink-soft);max-width:62ch;margin:0}
+.lede b{color:var(--ink);font-weight:600}
+h2{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:21px;
+  margin:0 0 8px;letter-spacing:-.01em}
+.qn{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.18em;color:var(--ink-faint);display:block;margin-bottom:9px}
+.sub{color:var(--ink-soft);margin:0 0 26px;max-width:64ch;font-size:15px}
+.hint{font-size:13px;color:var(--ink-faint);margin:14px 0 0;font-style:italic}
+
+/* ---- memory strip ---- */
+.strip{border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--surface)}
+.striphead{display:grid;grid-template-columns:150px 132px 1fr;gap:0;
+  background:var(--sunk);border-bottom:1px solid var(--line)}
+.striphead span{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);padding:9px 14px}
+.cell{display:grid;grid-template-columns:150px 132px 1fr;gap:0;width:100%;
+  border:0;border-top:1px solid var(--line);background:transparent;color:inherit;
+  text-align:left;cursor:pointer;font:inherit;padding:0;transition:background .15s}
+.cell:first-of-type{border-top:0}
+.cell:hover{background:var(--sunk)}
+.cell:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cell[aria-pressed="true"]{background:var(--accent-soft)}
+.cell>span{padding:10px 14px}
+.cell .addr{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;
+  color:var(--ink-soft);border-right:1px solid var(--line)}
+.cell[aria-pressed="true"] .addr{color:var(--accent)}
+.cell .bytes{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint);
+  border-right:1px solid var(--line)}
+.cell .meaning{font-size:13.5px}
+.tag{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  padding:2px 7px;border-radius:2px;margin-right:8px;letter-spacing:.05em}
+.tag-code{background:var(--code-soft);color:var(--code)}
+.tag-data{background:var(--data-soft);color:var(--data)}
+.tag-ptr{background:var(--accent-soft);color:var(--accent)}
+.tag-str{background:var(--ok-soft);color:var(--ok)}
+
+.panel{background:var(--sunk);border:1px solid var(--line);border-radius:3px;
+  padding:20px 22px;margin-top:16px;min-height:96px}
+.panel p{margin:0 0 10px;font-size:15px;max-width:72ch}
+.panel p:last-child{margin-bottom:0}
+.panel .ph{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px}
+
+/* ---- arithmetic ---- */
+.calc{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:24px}
+.sliders{display:grid;gap:18px;margin-bottom:22px}
+.srow label{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
+  display:block;margin-bottom:7px}
+.srow input[type=range]{width:100%;accent-color:var(--accent)}
+.srow .val{font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:700;color:var(--accent)}
+.sum{font-family:"JetBrains Mono",monospace;background:var(--sunk);
+  border:1px solid var(--line);border-radius:3px;padding:18px 20px;font-size:15px;
+  display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.sum .op{color:var(--ink-faint)}
+.sum .res{font-weight:800;font-size:18px;color:var(--accent);margin-left:auto}
+.note{font-size:14px;color:var(--ink-soft);margin:16px 0 0;max-width:70ch}
+
+/* ---- hops ---- */
+.hops{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:stretch}
+@media(max-width:780px){.hops{grid-template-columns:1fr;gap:8px}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:3px;
+  padding:15px 16px;transition:border-color .25s,box-shadow .25s,opacity .25s;opacity:.42}
+.box.lit{opacity:1;border-color:var(--accent);box-shadow:var(--shadow)}
+.box .bl{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);display:block;margin-bottom:8px}
+.box.lit .bl{color:var(--accent)}
+.box .bv{font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:700;
+  display:block;margin-bottom:6px;word-break:break-all}
+.box .bd{font-size:12.5px;color:var(--ink-soft);display:block;line-height:1.4}
+.arrow{display:flex;align-items:center;justify-content:center;
+  font-family:"JetBrains Mono",monospace;font-size:18px;color:var(--line);
+  transition:color .25s}
+.arrow.lit{color:var(--accent)}
+@media(max-width:780px){.arrow{transform:rotate(90deg);padding:2px 0}}
+.hopbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.hopbtn{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;
+  padding:8px 16px;border:1px solid var(--line);border-radius:3px;background:var(--surface);
+  color:inherit;cursor:pointer;transition:border-color .15s,background .15s}
+.hopbtn:hover{border-color:var(--accent)}
+.hopbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hopbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--ground)}
+
+/* ---- compare ---- */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.cmp{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:20px}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:15px;margin:0 0 12px;font-weight:700}
+.card.one h3{color:var(--code)}
+.card.two h3{color:var(--data)}
+.card ul{margin:0;padding-left:18px;font-size:14px;color:var(--ink-soft)}
+.card li{margin-bottom:7px}
+.card li b{color:var(--ink);font-weight:600}
+.card .ex{font-family:"JetBrains Mono",monospace;font-size:12px;background:var(--sunk);
+  border:1px solid var(--line);border-radius:2px;padding:9px 11px;margin-top:13px;
+  color:var(--ink-soft);word-break:break-all}
+
+/* ---- quiz ---- */
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:24px}
+.qtext{font-family:"JetBrains Mono",monospace;font-size:15px;font-weight:700;margin:0 0 4px}
+.qcap{font-size:14px;color:var(--ink-soft);margin:0 0 16px}
+.qopts{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.qopt{text-align:left;background:var(--sunk);border:1px solid var(--line);border-radius:3px;
+  padding:11px 14px;cursor:pointer;color:inherit;font-size:14px;
+  transition:border-color .15s,background .15s}
+.qopt:hover{border-color:var(--accent)}
+.qopt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.qopt.right{border-color:var(--ok);background:var(--ok-soft);color:var(--ok);font-weight:600}
+.qopt.wrong{border-color:var(--danger);background:var(--danger-soft);color:var(--danger)}
+.qfb{font-size:14.5px;margin:0;padding:14px 16px;border-radius:3px;background:var(--sunk);
+  border-left:2px solid var(--accent);max-width:74ch;display:none}
+.qfb.show{display:block}
+.qnav{display:flex;gap:10px;align-items:center;margin-top:16px}
+.qnav button{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;
+  padding:8px 18px;border:1px solid var(--accent);border-radius:3px;
+  background:var(--accent);color:var(--ground);cursor:pointer}
+.qnav button:disabled{opacity:.35;cursor:default}
+.qnav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.qcount{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint)}
+
+.rule{background:var(--surface);border:1px solid var(--line);
+  border-left:2px solid var(--accent);border-radius:3px;padding:20px 24px;margin-bottom:10px}
+.rule p{margin:0;font-size:16px;max-width:70ch}
+.rule .rk{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--accent)}
+footer{padding:34px 0 58px;color:var(--ink-faint);font-size:13px}
+footer a{color:var(--ink-soft)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <p class="eyebrow">Skyrim RE · ground floor</p>
+  <h1>What Is Actually<br>In Memory</h1>
+  <p class="lede">Every confusion between pointers, offsets, vtables and RTTI comes from one slip: mixing up <b>an address</b> with <b>the thing sitting at that address</b>. Fix that once and the rest falls out.</p>
+</header>
+
+<!-- 1 -->
+<section>
+  <span class="qn">01 · THE ONLY REAL THING</span>
+  <h2>Memory is a numbered street</h2>
+  <p class="sub">One long row of bytes. Each has a number — its address. What lives there is a separate question entirely. Click a row.</p>
+
+  <div class="strip">
+    <div class="striphead"><span>address</span><span>raw bytes</span><span>what lives there</span></div>
+    <div id="strip"></div>
+  </div>
+  <div class="panel" id="stripPanel" aria-live="polite"></div>
+  <p class="hint">Every row has an address. Only the address column is the address. Everything right of it is contents.</p>
+</section>
+
+<!-- 2 -->
+<section>
+  <span class="qn">02 · OFFSET</span>
+  <h2>An offset is not an address. It is a distance.</h2>
+  <p class="sub">Useless alone. It becomes an address only when added to a base. Drag both and watch the landing spot move.</p>
+
+  <div class="calc">
+    <div class="sliders">
+      <div class="srow">
+        <label for="baseSel">base — where the module got loaded</label>
+        <input type="range" id="baseSel" min="0" max="2" step="1" value="0">
+        <span class="val mono" id="baseVal"></span>
+      </div>
+      <div class="srow">
+        <label for="offSel">offset (RVA) — distance from module start</label>
+        <input type="range" id="offSel" min="0" max="3" step="1" value="1">
+        <span class="val mono" id="offVal"></span>
+      </div>
+    </div>
+    <div class="sum">
+      <span id="sumBase" class="mono"></span>
+      <span class="op">+</span>
+      <span id="sumOff" class="mono"></span>
+      <span class="op">=</span>
+      <span class="res" id="sumRes"></span>
+    </div>
+    <p class="note" id="calcNote"></p>
+  </div>
+</section>
+
+<!-- 3 -->
+<section>
+  <span class="qn">03 · POINTER vs VTABLE</span>
+  <h2>Counting the hops</h2>
+  <p class="sub">This is the step that gets collapsed. A direct call is one hop. A virtual call is <em>two</em>, and the second one is only decided at runtime.</p>
+
+  <div class="hopbar" id="hopbar"></div>
+  <div class="hops" id="hops"></div>
+  <div class="panel" id="hopPanel" aria-live="polite"></div>
+</section>
+
+<!-- 4 -->
+<section>
+  <span class="qn">04 · WHY THE NAMES SURVIVED</span>
+  <h2>vtable and RTTI sit next to each other</h2>
+  <p class="sub">Two different structures, always neighbours, and the reason Ghidra could recover <code>MapMenu</code> but never the method name.</p>
+
+  <div class="cmp">
+    <div class="card one">
+      <h3>vtable — function pointers</h3>
+      <ul>
+        <li>An array of <b>addresses</b>, one per virtual method.</li>
+        <li>Slot order is the class layout. Slot 7 is always the same method for that class.</li>
+        <li>Pure numbers. Carries <b>no names at all</b>.</li>
+        <li>Not a function, so <b>Ghidra emits no symbol</b> — this is why vtables are missing from <code>symbols-*.txt</code>.</li>
+      </ul>
+      <div class="ex">VTABLE_Compass[0] = 0x1418F8060<br>AE id 215380 · SE id 268825</div>
+    </div>
+    <div class="card two">
+      <h3>RTTI — the name tag</h3>
+      <ul>
+        <li>A small record next to the vtable holding the literal <b>string</b> <code>"MapMenu"</code>.</li>
+        <li>Exists so C++ can do <code>dynamic_cast</code> and <code>typeid</code> at runtime.</li>
+        <li>Bethesda shipped it, so <b>class names survived</b> in a stripped binary.</li>
+        <li>It names the <b>class only</b>. Method names were never stored anywhere.</li>
+      </ul>
+      <div class="ex">RTTI_Compass<br>AE id 396693 · SE id 688841</div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <p class="ph">the consequence</p>
+    <p>Ghidra sees a function in <code>MapMenu</code>'s vtable, reads the RTTI string beside it, and names it <code>MapMenu::sub</code>. <b>The class half is real</b> — recovered from bytes actually in the binary. <b>The <code>::sub</code> half means "unnamed"</b> — a placeholder, not information. Roughly 77% of these functions never got further than that, which is the entire reason CommonLib's hand-curated names matter.</p>
+  </div>
+</section>
+
+<!-- 5 -->
+<section>
+  <span class="qn">05 · CHECK YOURSELF</span>
+  <h2>Five that catch people</h2>
+  <p class="sub">Answer before revealing. A wrong guess here is cheaper than a wrong guess in a hook.</p>
+  <div class="quiz">
+    <p class="qtext" id="qText"></p>
+    <p class="qcap" id="qCap"></p>
+    <div class="qopts" id="qOpts"></div>
+    <p class="qfb" id="qFb"></p>
+    <div class="qnav">
+      <button type="button" id="qNext">next</button>
+      <span class="qcount" id="qCount"></span>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section>
+  <div class="rule"><p><span class="rk">Address</span> = where. <span class="rk">Contents</span> = what. Never the same question.</p></div>
+  <div class="rule"><p>An <span class="rk">offset</span> is a distance. It becomes an address only when something supplies the base.</p></div>
+  <div class="rule"><p>A <span class="rk">pointer</span> is a cell whose contents happen to be an address. Following it is a hop, and hops must be counted, never assumed.</p></div>
+  <div class="rule"><p>A <span class="rk">vtable</span> holds addresses and no names. <span class="rk">RTTI</span> holds the class name and no addresses. You need both to say what a function is.</p></div>
+</section>
+
+<footer>
+  Ground floor for <a href="re-mental-model.html">re-mental-model.html</a> (the four kinds of address, worked crash example) and <a href="address-chain.html">address-chain.html</a> (which file, which tool, and the id trap). Numbers on this page are real: Compass AE 1.6.1170.
+</footer>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- 1. memory strip ---------- */
+const ROWS=[
+ {a:"0x1409222C0",b:"48 89 5C 24 10",tag:["tag-code","CODE"],
+  m:"first instruction of <code>Compass::Update</code>",
+  ph:"This is code",
+  p:["The bytes <b>are</b> the function. Nothing points here from within this row — the instructions physically live at this address.",
+     "Ask for <q>the address of Compass::Update</q> and this number is the answer. There is no extra step, no dereference. A detour works by <b>overwriting these very bytes</b> with a jump."]},
+
+ {a:"0x1418F8060",b:"C0 22 92 40 01 00 00 00",tag:["tag-ptr","POINTER"],
+  m:"vtable slot 0 → holds <code>0x1409222C0</code>",
+  ph:"This is a pointer",
+  p:["The contents here are <b>an address, not code</b>. Read the 8 bytes little-endian and you get <code>0x1409222C0</code> — the row above.",
+     "So this cell does not <em>do</em> anything. It <b>names</b> where to go. That is one hop, and it is exactly the distinction that gets lost: this address and the address it holds are two different numbers."]},
+
+ {a:"0x1418F8068",b:"D0 25 92 40 01 00 00 00",tag:["tag-ptr","POINTER"],
+  m:"vtable slot 1 → holds <code>0x1409225D0</code>",
+  ph:"Slots are an array",
+  p:["Eight bytes after slot 0, because a 64-bit pointer is 8 bytes. Slot <em>n</em> sits at <code>vtable + n*8</code>.",
+     "The <b>slot number is the class layout</b>. <code>VTABLE_HUDMenu[0]</code> index 7 is <code>IMenu::PreDisplay</code> for every HUDMenu that ever exists. Which is why an off-by-one in a vtable index calls a completely unrelated method rather than failing."]},
+
+ {a:"0x141C4A118",b:"2E 3F 41 56 43 6F 6D 70",tag:["tag-str","RTTI STRING"],
+  m:"the literal text <code>.?AVCompass@@</code>",
+  ph:"This is a name, as bytes",
+  p:["Actual ASCII sitting in the binary. C++ needs it at runtime for <code>dynamic_cast</code> and <code>typeid</code>, so Bethesda could not strip it.",
+     "<b>This one string is why class names survived.</b> Ghidra found it, walked back to the vtable beside it, and could label everything in that table <code>Compass::…</code>. Method names were never stored, so it stopped at <code>::sub</code>."]},
+
+ {a:"0x1420176F0",b:"01 00 00 00",tag:["tag-data","GLOBAL"],
+  m:"<code>gIniPref_bShowCompass_Interface</code> — a bool",
+  p:["Four bytes of plain data. No code, no pointer. Just a value the engine reads.",
+     "Same <em>kind</em> of number as everything above — it has an address, it has an Address Library id, it greps out of the same files. <b>Nothing about the number tells you it is data and not code.</b> That ambiguity is exactly how two ids got mistaken for flags and corrupted engine state."],
+  ph:"This is data"}
+];
+
+const stripEl=document.getElementById("strip");
+const stripPanel=document.getElementById("stripPanel");
+ROWS.forEach((r,i)=>{
+  const b=document.createElement("button");
+  b.type="button"; b.className="cell"; b.setAttribute("aria-pressed","false");
+  b.innerHTML=`<span class="addr">${r.a}</span><span class="bytes">${r.b}</span>`+
+    `<span class="meaning"><span class="tag ${r.tag[0]}">${r.tag[1]}</span>${r.m}</span>`;
+  b.addEventListener("click",()=>pickRow(i));
+  stripEl.appendChild(b);
+});
+function pickRow(i){
+  const r=ROWS[i];
+  [...stripEl.children].forEach((c,j)=>c.setAttribute("aria-pressed",j===i?"true":"false"));
+  stripPanel.innerHTML=`<p class="ph">${r.ph}</p>`+r.p.map(t=>`<p>${t}</p>`).join("");
+}
+pickRow(0);
+
+/* ---------- 2. arithmetic ---------- */
+const BASES=[
+  {n:"0x140000000",l:"preferred base (what Ghidra assumes)",
+   note:"Ghidra maps the file at its preferred base because nothing is running. This is why <code>symbols-*.txt</code> addresses all start <code>140</code>."},
+  {n:"0x7FF6A2C0000",l:"actual base, this launch (ASLR)",
+   note:"With ASLR on, Windows loads the module somewhere else — <b>different every launch</b>. Any address you computed against <code>0x140000000</code> now points at nothing relevant. This is why <code>dump_memory</code> takes an rva or id and does the base math itself."},
+  {n:"0x7FF81140000",l:"actual base, next launch (ASLR)",
+   note:"Different again. Nothing about the module changed; only where Windows put it. <b>The RVA is the part that stays true</b>, which is why every stored finding records an RVA or an id, never a runtime address."}
+];
+const OFFS=[
+  {n:"0x0",l:"module start"},
+  {n:"0x8E6140",l:"a function — SE 1.5.97"},
+  {n:"0x18F8060",l:"VTABLE_Compass — AE"},
+  {n:"0x31AD490",l:"a global, not code — AE"}
+];
+const baseSel=document.getElementById("baseSel"), offSel=document.getElementById("offSel");
+function hex(a,b){return "0x"+(BigInt(a)+BigInt(b)).toString(16).toUpperCase();}
+function calc(){
+  const B=BASES[+baseSel.value], O=OFFS[+offSel.value];
+  document.getElementById("baseVal").textContent=B.n+"  —  "+B.l;
+  document.getElementById("offVal").textContent=O.n+"  —  "+O.l;
+  document.getElementById("sumBase").textContent=B.n;
+  document.getElementById("sumOff").textContent=O.n;
+  document.getElementById("sumRes").textContent=hex(B.n,O.n);
+  document.getElementById("calcNote").innerHTML=B.note;
+}
+baseSel.addEventListener("input",calc); offSel.addEventListener("input",calc); calc();
+
+/* ---------- 3. hops ---------- */
+const MODES={
+  direct:{
+    label:"direct call",
+    boxes:[
+      {l:"the call",v:"call 0x1409222C0",d:"address baked into the instruction"},
+      {l:"code",v:"Compass::Update",d:"execution lands here"},
+      {l:"—",v:"",d:"no second hop"}
+    ],
+    lit:[0,1],
+    ph:"one hop",
+    p:["The address is <b>in the instruction itself</b>. Nothing is read from memory first. Fastest, and completely fixed — this call site can never reach any other function.",
+       "This is what a detour hijacks: overwrite the bytes at the target so execution jumps to you instead."]
+  },
+  virt:{
+    label:"virtual call",
+    boxes:[
+      {l:"object",v:"this = 0x2A4F1C80",d:"first 8 bytes hold the vtable address"},
+      {l:"vtable",v:"0x1418F8060",d:"array of function pointers · slot n at +n*8"},
+      {l:"code",v:"Compass::Update",d:"whatever slot 0 currently holds"}
+    ],
+    lit:[0,1,2],
+    ph:"two hops — and the second is not decided until runtime",
+    p:["<b>Hop 1:</b> read the object's first 8 bytes to get its vtable address. <b>Hop 2:</b> read slot <em>n</em> of that vtable to get the function address. Only then call.",
+       "Nothing in the call site names a function. That is the point — a different subclass carries a different vtable, so the same code reaches different functions. In a decompile this shows up as <code>CALL [RAX+0xE0]</code>, and <b>you cannot tell what it calls without knowing the object's real type</b>.",
+       "It is also why a wrong vtable index does not crash cleanly: slot 8 is a perfectly valid function, just the wrong one."]
+  },
+  offset:{
+    label:"field read",
+    boxes:[
+      {l:"object",v:"this = 0x2A4F1C80",d:"base address of the struct"},
+      {l:"+ offset",v:"+ 0x30558",d:"distance to the field — pure arithmetic"},
+      {l:"the field",v:"0x2A4F4DD8",d:"read an int32 here"}
+    ],
+    lit:[0,1,2],
+    ph:"one hop, and it is addition — no pointer involved",
+    p:["<code>MapMenu + 0x30558</code> is not a pointer chase. It is the base plus a constant, then read whatever is there. <b>No memory is read to compute the destination.</b>",
+       "The risk is different from a vtable's: the offset is baked into the <em>class layout</em>, so if Bethesda reordered a field between SE and AE, the same arithmetic silently lands on a neighbouring field. It reads fine and returns garbage."]
+  }
+};
+const hopbar=document.getElementById("hopbar"), hopsEl=document.getElementById("hops"), hopPanel=document.getElementById("hopPanel");
+Object.entries(MODES).forEach(([k,m])=>{
+  const b=document.createElement("button");
+  b.type="button"; b.className="hopbtn"; b.dataset.k=k; b.textContent=m.label;
+  b.setAttribute("aria-pressed","false");
+  b.addEventListener("click",()=>showHop(k));
+  hopbar.appendChild(b);
+});
+function showHop(k){
+  const m=MODES[k];
+  [...hopbar.children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k?"true":"false"));
+  hopsEl.innerHTML="";
+  m.boxes.forEach((bx,i)=>{
+    if(i>0){
+      const ar=document.createElement("div");
+      ar.className="arrow"+(m.lit.includes(i)?" lit":"");
+      ar.textContent="→"; hopsEl.appendChild(ar);
+    }
+    const d=document.createElement("div");
+    d.className="box"+(m.lit.includes(i)?" lit":"");
+    d.innerHTML=`<span class="bl">${bx.l}</span><span class="bv">${bx.v||"&nbsp;"}</span><span class="bd">${bx.d}</span>`;
+    hopsEl.appendChild(d);
+  });
+  hopPanel.innerHTML=`<p class="ph">${m.ph}</p>`+m.p.map(t=>`<p>${t}</p>`).join("");
+}
+showHop("direct");
+
+/* ---------- 5. quiz ---------- */
+const QUIZ=[
+ {q:"0x8E6140",cap:"Is this a pointer?",
+  o:["Yes — it points to a function","No — it is an offset","Only on AE"],a:1,
+  f:"<b>An offset.</b> A distance from module start, nothing more. It becomes an address only once a base is added. Nothing is stored at <code>0x8E6140</code> — that location does not exist on its own."},
+
+ {q:"REL::RelocationID(52224, 53111)",cap:"Why two numbers?",
+  o:["Start and end of the function","SE and AE row numbers for the same function","Address and size"],a:1,
+  f:"<b>Two separate tables, independently numbered.</b> The id is not stable across SE and AE — 52224 is the SE row, 53111 the AE row. What crosses versions is <b>the pairing</b>, and that pairing is an assertion someone made, not something derived."},
+
+ {q:"symbols-ae.txt has no row for 0x1418F8060",cap:"What does the absence mean?",
+  o:["The address does not exist on AE","It is not a function — no symbol emitted","The dump is stale"],a:1,
+  f:"<b>Not a function.</b> It is a vtable — data. Ghidra's dump carries functions and named globals, effectively no vtables. So absence here is a <b>category signal</b>, not missing coverage: in offsets but not symbols usually means vtable, RTTI, or global."},
+
+ {q:"CALL [RAX+0xE0]",cap:"Which function does this call?",
+  o:["The one at 0xE0","Depends on the object's runtime type","Cannot be determined ever"],a:1,
+  f:"<b>Depends on the type.</b> It reads slot 0xE0 of whatever vtable that object carries. A different subclass, a different target. You <em>can</em> determine it — but only by knowing the object's real type and walking its vtable <b>in the binary</b>, never by trusting a header. NG vtable layouts have been seen off-by-one against the engine."},
+
+ {q:"An id resolves cleanly on both runtimes",cap:"Is the pair safe to use?",
+  o:["Yes — clean resolution is the check","No — resolving proves it exists, not what it is","Only if CommonLib also has it"],a:1,
+  f:"<b>Resolving proves existence, nothing more.</b> Id 406154 resolves on both. On AE it is a compass global; on SE the same row is <code>UNWIND_INFO_141bab124</code> — exception metadata. Valid address, wrong thing, no error anywhere. <b>Dump the bytes before writing through any id taken from a findings file.</b>"}
+];
+let qi=0, answered=false;
+const qText=document.getElementById("qText"), qCap=document.getElementById("qCap"),
+      qOpts=document.getElementById("qOpts"), qFb=document.getElementById("qFb"),
+      qNext=document.getElementById("qNext"), qCount=document.getElementById("qCount");
+
+function renderQ(){
+  const Q=QUIZ[qi]; answered=false;
+  qText.textContent=Q.q; qCap.textContent=Q.cap;
+  qFb.className="qfb"; qFb.innerHTML="";
+  qOpts.innerHTML="";
+  Q.o.forEach((t,i)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="qopt"; b.textContent=t;
+    b.addEventListener("click",()=>{
+      if(answered) return; answered=true;
+      [...qOpts.children].forEach((c,j)=>{
+        if(j===Q.a) c.classList.add("right");
+        else if(j===i) c.classList.add("wrong");
+      });
+      qFb.innerHTML=Q.f; qFb.classList.add("show");
+    });
+    qOpts.appendChild(b);
+  });
+  qCount.textContent=(qi+1)+" / "+QUIZ.length;
+  qNext.disabled=false;
+  qNext.textContent = qi===QUIZ.length-1 ? "restart" : "next";
+}
+qNext.addEventListener("click",()=>{ qi=(qi+1)%QUIZ.length; renderQ(); });
+renderQ();
+</script>
